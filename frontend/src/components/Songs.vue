@@ -17,6 +17,7 @@
             <tr>
               <th scope="col">Title</th>
               <th scope="col">Author</th>
+              <th scope="col">File</th>
               <th></th>
             </tr>
           </thead>
@@ -24,7 +25,10 @@
             <tr v-for="(song, index) in songs" :key="index">
               <td>{{ song.title }}</td>
               <td>{{ song.author }}</td>
-
+              <td>
+                <a :href="'http://localhost:5001/uploads/' + song.filename" target="_blank" v-if="song.filename">{{ song.filename }}</a>
+                <span v-else>No file</span>
+              </td>
               <td>
                 <div class="btn-group" role="group">
                   <button
@@ -68,7 +72,7 @@
             </button>
           </div>
           <div class="modal-body">
-            <form>
+            <form @submit.prevent="handleAddSubmit">
               <div class="mb-3">
                 <label for="addSongTitle" class="form-label">Title:</label>
                 <input
@@ -87,11 +91,18 @@
                   v-model="addSongForm.author"
                   placeholder="Enter author">
               </div>
+              <div class="mb-3">
+                <label for="addSongFile" class="form-label">File:</label>
+                <input
+                  type="file"
+                  class="form-control"
+                  id="addSongFile"
+                  @change="handleFileUpload">
+              </div>
               <div class="btn-group" role="group">
                 <button
-                  type="button"
-                  class="btn btn-primary btn-sm"
-                  @click="handleAddSubmit">
+                  type="submit"
+                  class="btn btn-primary btn-sm">
                   Submit
                 </button>
                 <button
@@ -148,7 +159,6 @@
                   v-model="editSongForm.author"
                   placeholder="Enter author">
               </div>
-
               <div class="btn-group" role="group">
                 <button
                   type="button"
@@ -193,6 +203,7 @@ export default {
       },
       message: '',
       showMessage: false,
+      selectedFile: null,
     };
   },
   components: {
@@ -219,22 +230,41 @@ export default {
           this.songs = res.data.songs;
         })
         .catch((error) => {
-
           console.error(error);
         });
     },
     handleAddReset() {
       this.initForm();
+      this.selectedFile = null;
     },
     handleAddSubmit() {
       this.toggleAddSongModal();
 
-      const payload = {
-        title: this.addSongForm.title,
-        author: this.addSongForm.author
-      };
-      this.addSong(payload);
+      let formData = new FormData();
+      formData.append('title', this.addSongForm.title);
+      formData.append('author', this.addSongForm.author);
+      if (this.selectedFile) {
+        formData.append('file', this.selectedFile);
+      }
+
+      const path = 'http://localhost:5001/songs';
+      axios.post(path, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      .then(() => {
+        this.getSongs();
+        this.message = 'Song added!';
+        this.showMessage = true;
+      })
+      .catch((error) => {
+        console.log(error);
+        this.getSongs();
+      });
+
       this.initForm();
+      this.selectedFile = null;
     },
     handleDeleteSong(song) {
       this.removeSong(song.id);
@@ -251,6 +281,9 @@ export default {
         author: this.editSongForm.author,
       };
       this.updateSong(payload, this.editSongForm.id);
+    },
+    handleFileUpload(event) {
+      this.selectedFile = event.target.files[0];
     },
     initForm() {
       this.addSongForm.title = '';

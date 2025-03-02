@@ -3,27 +3,38 @@
         {
             "id": "d5e80c03344a4cb6be401d72e6fb4bbe",
             "title": "Black Star",
-            "author": "Yngwie Malmsteen"
+            "author": "Yngwie Malmsteen",
+            "filename": null
         },
         {
             "id": "8fb6143b1ef04903956279974d14a443",
             "title": "Here I Go Again",
-            "author": "Whitesnake"
+            "author": "Whitesnake",
+            "filename": null
         },
         {
             "id": "9bce4557a3f34ab3bdc758cfcc1ccade",
             "title": "No Surprises",
-            "author": "Radiohead"
+            "author": "Radiohead",
+            "filename": null
         },
         {
             "id": "38e3bc3dfd544c1081543c0090eda8ce",
             "title": "Angeles",
-            "author": "Elliott Smith"
+            "author": "Elliott Smith",
+            "filename": null
         },
         {
             "id": "c8bbc4dc23534abfa70d919ed16efad8",
             "title": "On The Road Again",
-            "author": "Canned Heat"
+            "author": "Canned Heat",
+            "filename": null
+        },
+        {
+            "id": "26faa171e0324f06a0c15dd311a7615f",
+            "title": "Let It Be",
+            "author": "The Beatles",
+            "filename": "FMP_C5_F01_Beatles_LetItBe-mm1-4_Original.wav"
         }
     ]
 }
