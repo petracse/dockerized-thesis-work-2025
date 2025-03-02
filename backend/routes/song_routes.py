@@ -31,12 +31,20 @@ def all_songs():
             return jsonify({'status': 'error', 'message': 'No selected file'})
 
         if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
+            # Eredeti fájlnév kiterjesztése
+            file_extension = file.filename.rsplit('.', 1)[1].lower()
+
+            # Új ID generálása
+            new_song_id = uuid.uuid4().hex
+
+            # Új fájlnév létrehozása az ID és a kiterjesztés alapján
+            filename = f"{new_song_id}.{file_extension}"
+
             file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
 
-            post_data = request.form  # Use request.form to get other form data
-            new_song = Song(post_data.get('title'), post_data.get('author'), filename=filename)  # Pass filename to Song
+            post_data = request.form  # Használd a request.form-ot az egyéb adatokhoz
+            new_song = Song(post_data.get('title'), post_data.get('author'), id=new_song_id, filename=filename)
             SONGS.append(new_song)
             save_songs(SONGS)
 
@@ -59,6 +67,25 @@ def single_song(song_id):
         save_songs(SONGS)
         return jsonify({'status': 'success', 'message': 'Song updated!'})
     if request.method == 'DELETE':
-        SONGS = remove_song(SONGS, song_id)
-        save_songs(SONGS)
-        return jsonify({'status': 'success', 'message': 'Song removed!'})
+        # Megkeressük a törlendő dalt
+        song_to_delete = next((song for song in SONGS if song.id == song_id), None)
+
+        if song_to_delete:
+            # Eltávolítjuk a fájlt az uploads mappából, ha létezik
+            filename = song_to_delete.filename
+            if filename:
+                file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                try:
+                    os.remove(file_path)
+                    print(f"File '{filename}' deleted from '{current_app.config['UPLOAD_FOLDER']}'")
+                except FileNotFoundError:
+                    print(f"File '{filename}' not found in '{current_app.config['UPLOAD_FOLDER']}'")
+                except Exception as e:
+                    print(f"Error deleting file '{filename}': {e}")
+
+            # Eltávolítjuk a dalt a listából
+            SONGS = remove_song(SONGS, song_id)
+            save_songs(SONGS)
+            return jsonify({'status': 'success', 'message': 'Song removed!'})
+        else:
+            return jsonify({'status': 'error', 'message': 'Song not found!'})
