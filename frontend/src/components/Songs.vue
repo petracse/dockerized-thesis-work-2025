@@ -3,6 +3,7 @@
     <div class="row">
       <div class="col-sm-10">
         <h1>Songs</h1>
+         <router-link to="/music-processing">Go to Music Processing</router-link>
         <hr><br><br>
         <alert :message="message" v-if="showMessage"></alert>
         <button
