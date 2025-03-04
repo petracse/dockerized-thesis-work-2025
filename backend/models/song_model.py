@@ -5,14 +5,14 @@ class Song:
         self.id = id if id else uuid.uuid4().hex
         self.title = title
         self.author = author
-        self.filename = filename  # Store the filename
+        self.filename = filename
 
     def to_dict(self):
         return {
             'id': self.id,
             'title': self.title,
             'author': self.author,
-            'filename': self.filename  # Include filename in dictionary representation
+            'filename': self.filename
         }
 
     @classmethod

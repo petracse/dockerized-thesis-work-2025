@@ -99,12 +99,12 @@
                   class="form-control"
                   id="addSongFile"
                   @change="handleFileUpload">
-                <!-- Hangfájl lejátszó -->
+                <!-- Audio file player -->
                 <audio controls v-if="addSongForm.audioUrl">
                   <source :src="addSongForm.audioUrl" type="audio/mpeg">
                   Your browser does not support the audio element.
                 </audio>
-                <!-- Fájl törlése gomb -->
+                <!-- File deletion button -->
                 <button
                   type="button"
                   class="btn btn-danger btn-sm mt-2"
@@ -180,12 +180,12 @@
                   class="form-control"
                   id="editSongFile"
                   @change="handleEditFileUpload">
-                <!-- Hangfájl lejátszó -->
+                <!-- Audio file player -->
                 <audio controls v-if="editSongForm.audioUrl">
                   <source :src="editSongForm.audioUrl" type="audio/mpeg">
                   Your browser does not support the audio element.
                 </audio>
-                <!-- Fájl törlése gomb -->
+                <!-- File deletion button -->
                 <button
                   type="button"
                   class="btn btn-danger btn-sm mt-2"
@@ -228,20 +228,20 @@ export default {
       addSongForm: {
         title: '',
         author: '',
-        audioUrl: null, // Hangfájl URL-je a lejátszáshoz
+        audioUrl: null,
       },
       songs: [],
       editSongForm: {
         id: '',
         title: '',
         author: '',
-        filename: null, // Az eredeti fájlnév tárolására
-        audioUrl: null, // A lejátszáshoz
+        filename: null,
+        audioUrl: null,
       },
       message: '',
       showMessage: false,
-      selectedFile: null, // Kiválasztott fájl az add modalhoz
-      selectedEditFile: null, // Kiválasztott fájl az edit modalhoz
+      selectedFile: null,
+      selectedEditFile: null,
     };
   },
   components: {
@@ -274,7 +274,7 @@ export default {
     handleAddReset() {
       this.initForm();
       this.selectedFile = null;
-      this.addSongForm.audioUrl = null; // Töröljük a hangfájl URL-jét
+      this.addSongForm.audioUrl = null;
     },
     handleAddSubmit() {
       this.toggleAddSongModal();
@@ -304,7 +304,7 @@ export default {
 
       this.initForm();
       this.selectedFile = null;
-      this.addSongForm.audioUrl = null; // Töröljük a hangfájl URL-jét
+      this.addSongForm.audioUrl = null;
     },
     handleDeleteSong(song) {
       this.removeSong(song.id);
@@ -312,7 +312,7 @@ export default {
     handleEditCancel() {
       this.toggleEditSongModal(null);
       this.initForm();
-      this.getSongs(); // why?
+      this.getSongs();
     },
     handleEditSubmit() {
       this.toggleEditSongModal(null);
@@ -346,11 +346,11 @@ export default {
     },
     handleFileUpload(event) {
       this.selectedFile = event.target.files[0];
-      this.addSongForm.audioUrl = URL.createObjectURL(this.selectedFile); // Létrehozzuk a hangfájl URL-jét
+      this.addSongForm.audioUrl = URL.createObjectURL(this.selectedFile);
     },
     handleFileRemove() {
       this.selectedFile = null;
-      this.addSongForm.audioUrl = null; // Töröljük a hangfájl URL-jét
+      this.addSongForm.audioUrl = null;
     },
     handleEditFileUpload(event) {
       this.selectedEditFile = event.target.files[0];
@@ -361,21 +361,18 @@ export default {
       const filename = this.editSongForm.filename;
 
       try {
-        // Küldjünk egy DELETE kérést a backendnek a fájl törléséhez
         const response = await axios.delete(`http://localhost:5001/songs/${songId}/file`, {
-          data: { filename: filename } // Szükség lehet a fájlnév elküldésére
+          data: { filename: filename }
         });
 
         if (response.status === 200) {
-          // Sikeres törlés
           this.editSongForm.audioUrl = null;
           this.editSongForm.filename = null;
           this.selectedEditFile = null;
           this.message = 'File removed!';
           this.showMessage = true;
-          this.getSongs(); // Frissítsük a dalok listáját
+          this.getSongs();
         } else {
-          // Sikertelen törlés
           console.error('Error removing file:', response.data);
           this.message = 'Error removing file!';
           this.showMessage = true;
@@ -389,7 +386,7 @@ export default {
     initForm() {
       this.addSongForm.title = '';
       this.addSongForm.author = '';
-      this.addSongForm.audioUrl = null; // Töröljük a hangfájl URL-jét
+      this.addSongForm.audioUrl = null;
       this.editSongForm.id = '';
       this.editSongForm.title = '';
       this.editSongForm.author = '';

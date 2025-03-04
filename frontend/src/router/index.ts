@@ -18,9 +18,9 @@ const router = createRouter({
       component: Ping
     },
     {
-      path: '/music-processing',  // Új útvonal a MusicProcessing komponenshez
+      path: '/music-processing',
       name: 'music-processing',
-      component: MusicProcessing,  // Az útvonalhoz rendeljük a komponenst
+      component: MusicProcessing,
     }
   ]
 })
