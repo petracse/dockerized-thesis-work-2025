@@ -1,21 +1,21 @@
 #!/bin/bash
 
-# Belépés a virtuális környezetbe
-cd backend
-source venv/bin/activate
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-# Flask alkalmazás indítása
-flask run --port=5001 --debug > /dev/null 2>&1 &
-echo "Flask alkalmazás elindítva a háttérben, port: 5001, debug módban."
+start_flask() {
+    if command -v gnome-terminal &> /dev/null
+    then
+        gnome-terminal --title="Flask Backend" -- bash -c "cd $SCRIPT_DIR/backend && source venv/bin/activate && flask run --port=5001 --debug; exec bash" &
+    else
+        cmd.exe /c start wsl.exe -e bash -c "cd $SCRIPT_DIR/backend && source venv/bin/activate && flask run --port=5001 --debug" &
+    fi
+}
 
-# Kilépés a virtuális környezetből
-deactivate
+start_vue() {
+    cd $SCRIPT_DIR/frontend
+    npm run dev
+}
 
-cd ..
+start_flask
+start_vue
 
-# Belépés a tw-2025-1 mappába és npm run dev indítása
-cd frontend
-npm run dev > /dev/null 2>&1 &
-echo "npm run dev elindítva a háttérben."
-
-# read -n 1 -s

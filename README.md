@@ -38,9 +38,7 @@ Use the provided script to start both the Flask backend and the Vue.js frontend:
 ## Stopping the Application
 
 ### Stop Flask and Vue.js
-Use the provided script to stop both services:
-```bash
-./stop_flask_and_npm.sh
-```
+
+Ctrl + C in both terminals
 
 
