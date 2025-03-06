@@ -4,3 +4,47 @@ backend/songs.json
 backend/__pycache__/
 backend/*.pyc
 backend/uploads/
+
+# Logs
+frontend/logs
+frontend/*.log
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+frontend/lerna-debug.log*
+
+# Dependencies
+frontend/node_modules
+
+# System Files
+frontend/.DS_Store
+
+# Build output
+frontend/dist
+frontend/dist-ssr
+
+# Coverage
+frontend/coverage
+
+# Local files
+frontend/*.local
+
+# Cypress
+frontend/cypress/videos/
+frontend/cypress/screenshots/
+
+# Editor directories and files
+frontend/.vscode/*
+!frontend/.vscode/extensions.json
+frontend/.idea
+frontend/*.suo
+frontend/*.ntvs*
+frontend/*.njsproj
+frontend/*.sln
+frontend/*.sw?
+
+# Typescript cache
+frontend/*.tsbuildinfo
+
+
