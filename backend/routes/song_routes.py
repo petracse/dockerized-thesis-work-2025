@@ -1,8 +1,10 @@
 import os
 import uuid
-from flask import Flask, jsonify, request, Blueprint, send_from_directory, current_app
+import boto3
+from flask import jsonify, request, Blueprint, current_app
 from utils.song_utils import load_songs, save_songs, remove_song
 from models.song_model import Song
+from dotenv import load_dotenv
 
 song_routes = Blueprint('song_routes', __name__)
 
@@ -10,10 +12,22 @@ SONGS = load_songs()
 
 ALLOWED_EXTENSIONS = {'mp3', 'wav'}
 
+load_dotenv()
+
+S3_BUCKET = os.getenv('S3_BUCKET')
+S3_REGION = os.getenv('S3_REGION')
+AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+
+s3_client = boto3.client(
+    's3',
+    region_name=S3_REGION,
+    aws_access_key_id=AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=AWS_SECRET_ACCESS_KEY
+)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
 
 @song_routes.route('/ping', methods=['GET'])
 def ping_pong():
@@ -34,13 +48,17 @@ def all_songs():
 
         if file and allowed_file(file.filename):
             file_extension = file.filename.rsplit('.', 1)[1].lower()
-
             new_song_id = uuid.uuid4().hex
-
             filename = f"{new_song_id}.{file_extension}"
-
             file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
+
+            try:
+                s3_client.upload_fileobj(file, S3_BUCKET, filename) # feltöltjük az S3-ba
+                #os.remove(file_path)
+            except Exception as e:
+                print(f"S3 feltöltési hiba: {e}")
+                return jsonify({'message': f'Hiba a fájl S3-ba való feltöltése közben: {str(e)}'}), 500
 
             post_data = request.form
             new_song = Song(post_data.get('title'), post_data.get('author'), id=new_song_id, filename=filename)
@@ -79,12 +97,14 @@ def single_song(song_id):
                     old_file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], song_to_update.filename)
                     try:
                         os.remove(old_file_path)
+                        s3_client.delete_object(Bucket=S3_BUCKET, Key=song_to_update.filename)
                     except FileNotFoundError:
                         pass
                     except Exception as e:
                         print(f"Error deleting old file: {e}")
 
                 file.save(file_path)
+                s3_client.upload_fileobj(file, S3_BUCKET, filename)
 
                 song_to_update.filename = filename
             else:
@@ -116,6 +136,7 @@ def delete_song_file(song_id):
         old_file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], song_to_update.filename)
         try:
             os.remove(old_file_path)
+            s3_client.delete_object(Bucket=S3_BUCKET, Key=song_to_update.filename)
             song_to_update.filename = None  # Töröljük a fájlnevet a song objektumból
             save_songs(SONGS)  # Mentsük a változásokat
         except FileNotFoundError:
@@ -138,9 +159,10 @@ def single_song_delete(song_id):
             file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
             try:
                 os.remove(file_path)
-                print(f"File '{filename}' deleted from '{current_app.config['UPLOAD_FOLDER']}'")
+                s3_client.delete_object(Bucket=S3_BUCKET, Key=song_to_delete.filename)
+                print(f"File '{filename}' deleted from S3 bucket '{S3_BUCKET}'")
             except FileNotFoundError:
-                print(f"File '{filename}' not found in '{current_app.config['UPLOAD_FOLDER']}'")
+                print(f"File '{filename}' not found in S3 bucket '{S3_BUCKET}'")
             except Exception as e:
                 print(f"Error deleting file '{filename}': {e}")
 

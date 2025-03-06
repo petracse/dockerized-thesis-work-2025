@@ -3,8 +3,6 @@ from utils.music_processing_utils import compute_chromagram_from_filename
 import os
 music_processing = Blueprint('music_processing_routes', __name__)
 
-
-
 @music_processing.route('/process-audio', methods=['POST'])
 def process_audio():
 
