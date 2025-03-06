@@ -1,6 +1,0 @@
-venv/
-.env
-songs.json
-__pycache__/
-*.pyc
-uploads/
