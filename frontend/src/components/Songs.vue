@@ -3,7 +3,7 @@
     <div class="row">
       <div class="col-sm-10">
         <h1>Songs</h1>
-         <router-link to="/music-processing">Go to Music Processing</router-link>
+        <router-link to="/music-processing">Go to Music Processing</router-link>
         <hr><br><br>
         <alert :message="message" v-if="showMessage"></alert>
         <button
@@ -193,6 +193,16 @@
                   v-if="editSongForm.filename">
                   Remove File
                 </button>
+                <button
+                  type="button"
+                  class="btn btn-info btn-sm mt-2"
+                  @click="handleAnalyzeSong"
+                  v-if="editSongForm.filename">
+                  Analyze Song
+                </button>
+              </div>
+              <div v-if="chromagramData">
+                <p>{{ chromagramData }}</p>
               </div>
               <div class="btn-group" role="group">
                 <button
@@ -242,6 +252,7 @@ export default {
       showMessage: false,
       selectedFile: null,
       selectedEditFile: null,
+      chromagramData: null,
     };
   },
   components: {
@@ -275,6 +286,7 @@ export default {
       this.initForm();
       this.selectedFile = null;
       this.addSongForm.audioUrl = null;
+      this.chromagramData = null; // Reset chromagram data
     },
     handleAddSubmit() {
       this.toggleAddSongModal();
@@ -292,19 +304,20 @@ export default {
           'Content-Type': 'multipart/form-data'
         }
       })
-      .then(() => {
-        this.getSongs();
-        this.message = 'Song added!';
-        this.showMessage = true;
-      })
-      .catch((error) => {
-        console.log(error);
-        this.getSongs();
-      });
+        .then(() => {
+          this.getSongs();
+          this.message = 'Song added!';
+          this.showMessage = true;
+        })
+        .catch((error) => {
+          console.log(error);
+          this.getSongs();
+        });
 
       this.initForm();
       this.selectedFile = null;
       this.addSongForm.audioUrl = null;
+      this.chromagramData = null; // Reset chromagram data
     },
     handleDeleteSong(song) {
       this.removeSong(song.id);
@@ -331,18 +344,19 @@ export default {
           'Content-Type': 'multipart/form-data'
         }
       })
-      .then(() => {
-        this.getSongs();
-        this.message = 'Song updated!';
-        this.showMessage = true;
-      })
-      .catch((error) => {
-        console.log(error);
-        this.getSongs();
-      });
+        .then(() => {
+          this.getSongs();
+          this.message = 'Song updated!';
+          this.showMessage = true;
+        })
+        .catch((error) => {
+          console.log(error);
+          this.getSongs();
+        });
 
       this.initForm();
       this.selectedEditFile = null;
+      this.chromagramData = null; // Reset chromagram data
     },
     handleFileUpload(event) {
       this.selectedFile = event.target.files[0];
@@ -392,6 +406,7 @@ export default {
       this.editSongForm.author = '';
       this.editSongForm.filename = null;
       this.editSongForm.audioUrl = null;
+      this.chromagramData = null; // Reset chromagram data
     },
     removeSong(songID) {
       const path = `http://localhost:5001/songs/${songID}`;
@@ -443,6 +458,26 @@ export default {
         .catch((error) => {
           console.error(error);
           this.getSongs();
+        });
+    },
+    handleAnalyzeSong() {
+      const songId = this.editSongForm.id;
+      const filename = this.editSongForm.filename;
+
+      axios.get(`http://localhost:5001/songs/${songId}/analyze-song`, {
+        params: { filename: filename }
+      })
+        .then(response => {
+          // Kezeld a választ a backendtől
+          console.log('Song analysis response:', response.data);
+          this.chromagramData = response.data.chromagram;
+          this.message = 'Song analyzed!';
+          this.showMessage = true;
+        })
+        .catch(error => {
+          console.error('Error analyzing song:', error);
+          this.message = 'Error analyzing song!';
+          this.showMessage = true;
         });
     },
   },
