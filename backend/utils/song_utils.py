@@ -1,4 +1,3 @@
-# utils/song_utils.py
 import json
 from models.song_model import Song
 
@@ -9,11 +8,8 @@ def load_songs():
         with open(SONGS_FILE, 'r') as f:
             data = json.load(f)
             return [Song.from_dict(song) for song in data.get('songs', [])]
-    except FileNotFoundError:
+    except (FileNotFoundError, json.JSONDecodeError):
         return []
-    except json.JSONDecodeError:
-        return []
-
 
 def save_songs(songs):
     data = {'songs': [song.to_dict() for song in songs]}
@@ -22,3 +18,6 @@ def save_songs(songs):
 
 def remove_song(songs, song_id):
     return [song for song in songs if song.id != song_id]
+
+def allowed_file(filename, allowed_extensions):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions

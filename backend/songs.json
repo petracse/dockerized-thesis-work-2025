@@ -19,10 +19,16 @@
             "filename": null
         },
         {
-            "id": "b2864cc7fb5f40bea86958abbfcecb0b",
+            "id": "f17b964972264644817261b32aae96cd",
             "title": "Let It Be",
             "author": "The Beatles",
-            "filename": null
+            "filename": "f17b964972264644817261b32aae96cd.mp3"
+        },
+        {
+            "id": "d1f7c98db87041e288c72f3bf7319e67",
+            "title": "Dust in the Baggie",
+            "author": "Billy Strings",
+            "filename": "d1f7c98db87041e288c72f3bf7319e67.mp3"
         }
     ]
 }
