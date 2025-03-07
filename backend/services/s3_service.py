@@ -12,10 +12,12 @@ def get_s3_client():
 def upload_file_to_s3(file, filename):
     s3_client = get_s3_client()
     try:
-        s3_client.upload_fileobj(file, current_app.config['S3_BUCKET'], filename)
+        file.stream.seek(0) # without this the file will be read as empty
+        s3_client.upload_fileobj(file.stream, current_app.config['S3_BUCKET'], filename)
     except Exception as e:
         print(f"S3 upload error: {e}")
         raise
+
 
 def delete_file_from_s3(filename):
     s3_client = get_s3_client()

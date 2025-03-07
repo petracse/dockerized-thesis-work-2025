@@ -441,6 +441,9 @@ export default {
       }
       const body = document.querySelector('body');
       this.activeEditSongModal = !this.activeEditSongModal;
+      if (!this.activeEditSongModal) {
+        this.chromagramData = null; // Reset chromagram data when modal closes
+      }
       if (this.activeEditSongModal) {
         body.classList.add('modal-open');
       } else {
