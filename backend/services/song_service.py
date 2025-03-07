@@ -15,6 +15,8 @@ class SongService:
 
     def add_song(self, title, author, file, upload_folder):
         new_song_id = uuid.uuid4().hex
+        while any(song.id == new_song_id for song in self.songs):
+            new_song_id = uuid.uuid4().hex
         filename = f"{new_song_id}.{file.filename.rsplit('.', 1)[1].lower()}"
         file_path = os.path.join(upload_folder, filename)
         file.save(file_path)
