@@ -4,49 +4,73 @@
             "id": "9bce4557a3f34ab3bdc758cfcc1ccade",
             "title": "No Surprises",
             "author": "Radiohead",
-            "filename": null
+            "filename": null,
+            "userid": "default_user_id",
+            "created_at": "2025-03-07T09:45:02.369127",
+            "updated_at": null
         },
         {
             "id": "38e3bc3dfd544c1081543c0090eda8ce",
             "title": "Angeles",
             "author": "Elliott Smith",
-            "filename": null
+            "filename": null,
+            "userid": "default_user_id",
+            "created_at": "2025-03-07T09:45:02.369144",
+            "updated_at": null
         },
         {
             "id": "c8bbc4dc23534abfa70d919ed16efad8",
             "title": "On The Road Again",
             "author": "Canned Heat",
-            "filename": null
+            "filename": null,
+            "userid": "default_user_id",
+            "created_at": "2025-03-07T09:45:02.369149",
+            "updated_at": null
         },
         {
             "id": "f17b964972264644817261b32aae96cd",
             "title": "Let It Be",
             "author": "The Beatles",
-            "filename": null
+            "filename": null,
+            "userid": "default_user_id",
+            "created_at": "2025-03-07T09:45:02.369153",
+            "updated_at": null
         },
         {
             "id": "d1f7c98db87041e288c72f3bf7319e67",
             "title": "Dust in the Baggie",
             "author": "Billy Strings",
-            "filename": null
+            "filename": null,
+            "userid": "default_user_id",
+            "created_at": "2025-03-07T09:45:02.369157",
+            "updated_at": null
         },
         {
             "id": "357452a085d2416581af19cdd994d7a6",
             "title": "Represent",
             "author": "NAS",
-            "filename": "357452a085d2416581af19cdd994d7a6.mp3"
+            "filename": "357452a085d2416581af19cdd994d7a6.mp3",
+            "userid": "default_user_id",
+            "created_at": "2025-03-07T09:45:02.369161",
+            "updated_at": "2025-03-07T09:51:44.374705"
         },
         {
             "id": "a9d1bdfe26e1448aa8934d13e5cbe8dc",
             "title": "The Genesis",
             "author": "NAS",
-            "filename": "a9d1bdfe26e1448aa8934d13e5cbe8dc.mp3"
+            "filename": "a9d1bdfe26e1448aa8934d13e5cbe8dc.mp3",
+            "userid": "default_user_id",
+            "created_at": "2025-03-07T09:45:02.369164",
+            "updated_at": null
         },
         {
             "id": "e068fe84ceb949aa9e84bc9f5d019831",
             "title": "Let It Be",
             "author": "The Beatles",
-            "filename": "e068fe84ceb949aa9e84bc9f5d019831.wav"
+            "filename": "e068fe84ceb949aa9e84bc9f5d019831.wav",
+            "userid": "default_user_id",
+            "created_at": "2025-03-07T09:45:02.369167",
+            "updated_at": null
         }
     ]
 }

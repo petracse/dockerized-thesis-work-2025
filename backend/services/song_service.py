@@ -3,6 +3,7 @@ import uuid
 from models.song_model import Song
 from utils.song_utils import load_songs, save_songs, remove_song
 from services.s3_service import upload_file_to_s3, delete_file_from_s3
+from datetime import datetime
 import os
 
 class SongService:
@@ -40,6 +41,7 @@ class SongService:
 
         song_to_update.title = title if title else song_to_update.title
         song_to_update.author = author if author else song_to_update.author
+        song_to_update.updated_at = datetime.now().isoformat()  # Frissítsd az updated_at mezőt
 
         save_songs(self.songs)
         return song_to_update

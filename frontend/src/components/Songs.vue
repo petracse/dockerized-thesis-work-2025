@@ -19,7 +19,9 @@
               <th scope="col">Title</th>
               <th scope="col">Author</th>
               <th scope="col">File</th>
-              <th></th>
+              <th scope="col">Created At</th>
+              <th scope="col">Updated At</th>
+            <th></th>
             </tr>
           </thead>
           <tbody>
@@ -30,6 +32,8 @@
                 <a :href="'http://localhost:5001/uploads/' + song.filename" target="_blank" v-if="song.filename">{{ song.filename }}</a>
                 <span v-else>No file</span>
               </td>
+              <td>{{ formatIsoDate(song.created_at) }}</td>
+              <td>{{ formatIsoDate(song.updated_at) }}</td>
               <td>
                 <div class="btn-group" role="group">
                   <button
@@ -259,6 +263,20 @@ export default {
     alert: Alert,
   },
   methods: {
+    formatIsoDate(isoDate) {
+        if (!isoDate) return 'N/A';
+        const date = new Date(isoDate);
+        const options = {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+        };
+
+        return date.toLocaleString('hu-HU', options).replace(',', '');
+    },
     addSong(payload) {
       const path = 'http://localhost:5001/songs';
       axios.post(path, payload)
