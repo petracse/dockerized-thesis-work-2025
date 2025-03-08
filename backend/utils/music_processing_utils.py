@@ -1,5 +1,6 @@
 import numpy as np
 import librosa
+import soundfile as sf
 
 def normalize_feature_sequence(X, norm='2', threshold=0.0001, v=None):
     """Normalizes the columns of a feature sequence
@@ -87,7 +88,10 @@ def compute_chromagram_from_filename(fn_wav, Fs=22050, N=4096, H=2048, gamma=Non
         Fs (scalar): Sampling rate of audio signal
         x_dur (float): Duration (seconds) of audio signal
     """
-    x, Fs = librosa.load(fn_wav, sr=Fs)
+    with sf.SoundFile(fn_wav) as f:
+        x = f.read()
+        Fs = f.samplerate
+    #x, Fs = librosa.load(fn_wav, sr=Fs) # Alternative
     x_dur = x.shape[0] / Fs
     if version == 'STFT':
         # Compute chroma features with STFT

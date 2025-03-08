@@ -6,12 +6,11 @@ music_processing = Blueprint('music_processing_routes', __name__)
 @music_processing.route('/songs/<song_id>/analyze-song', methods=['GET'])
 def analyze_song(song_id):
     uploads_folder = os.path.join(current_app.root_path, 'uploads')
-    filename = request.args.get('filename')  # Kinyerjük a filename-et a query paraméterekből
+    filename = request.args.get('filename')
 
     if not filename:
         return jsonify({"error": "Filename is missing"}), 400
 
-    # Összerakjuk a fájl teljes elérési útvonalát
     fn_wav = os.path.join(uploads_folder, filename)
 
     if not os.path.exists(fn_wav):
