@@ -1,7 +1,6 @@
 import uuid
 
 from models.song_model import Song, db
-from services.s3_service import upload_file_to_s3, delete_file_from_s3
 from datetime import datetime, timezone
 import os
 
@@ -19,8 +18,6 @@ class SongService:
             file_path = os.path.join(upload_folder, filename)
             file.save(file_path)
 
-            upload_file_to_s3(file, filename)
-
         new_song = Song(title=title, author=author, filename=filename)
         db.session.add(new_song)
         db.session.commit()
@@ -37,7 +34,6 @@ class SongService:
             filename = f"{song_id}.{file.filename.rsplit('.', 1)[1].lower()}"
             file_path = os.path.join(upload_folder, filename)
             file.save(file_path)
-            upload_file_to_s3(file, filename)
             song.filename = filename
 
         song.title = title if title else song.title
@@ -65,6 +61,5 @@ class SongService:
                 os.remove(file_path)
             except FileNotFoundError:
                 pass
-            delete_file_from_s3(song.filename)
             song.filename = None
             db.session.commit()
