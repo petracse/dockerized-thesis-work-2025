@@ -19,6 +19,11 @@ pip install -r requirements.txt
 deactivate
 ```
 
+### Installation of Madmom
+```bash
+pip install git+https://github.com/CPJKU/madmom
+```
+
 ## Frontend Setup
 
 ### Install Node Dependencies
@@ -40,8 +45,3 @@ Use the provided script to start both the Flask backend and the Vue.js frontend:
 ### Stop Flask and Vue.js
 
 Ctrl + C in both terminals
-
-### Installation of Madmom
-```bash
-pip install git+https://github.com/CPJKU/madmom
-```
