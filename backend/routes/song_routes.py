@@ -5,7 +5,7 @@ from utils.song_utils import allowed_file
 song_routes = Blueprint('song_routes', __name__)
 song_service = SongService()
 
-ALLOWED_EXTENSIONS = {'mp3', 'wav'}
+ALLOWED_EXTENSIONS = {'mp3', 'wav', 'flac', 'ogg'}
 
 @song_routes.route('/ping', methods=['GET'])
 def ping_pong():

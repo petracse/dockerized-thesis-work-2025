@@ -205,9 +205,15 @@
                   Analyze Song
                 </button>
               </div>
-              <div v-if="chromagramData">
-                <p>{{ chromagramData }}</p>
+              <div v-if="chordsByTime && Object.keys(chordsByTime).length">
+                <h5>Detected Chords:</h5>
+                <ul>
+                  <li v-for="(chord, time) in chordsByTime" :key="time">
+                    {{ time }} s: {{ chord }}
+                  </li>
+                </ul>
               </div>
+
               <div class="btn-group" role="group">
                 <button
                   type="submit"
@@ -256,7 +262,7 @@ export default {
       showMessage: false,
       selectedFile: null,
       selectedEditFile: null,
-      chromagramData: null,
+      chordsByTime: null,
     };
   },
   components: {
@@ -304,7 +310,7 @@ export default {
       this.initForm();
       this.selectedFile = null;
       this.addSongForm.audioUrl = null;
-      this.chromagramData = null; // Reset chromagram data
+      this.chordsByTime= null;
     },
     handleAddSubmit() {
       this.toggleAddSongModal();
@@ -335,7 +341,7 @@ export default {
       this.initForm();
       this.selectedFile = null;
       this.addSongForm.audioUrl = null;
-      this.chromagramData = null; // Reset chromagram data
+      this.chordsByTime = null;
     },
     handleDeleteSong(song) {
       this.removeSong(song.id);
@@ -374,7 +380,7 @@ export default {
 
       this.initForm();
       this.selectedEditFile = null;
-      this.chromagramData = null; // Reset chromagram data
+      this.chordsByTime = null;
     },
     handleFileUpload(event) {
       this.selectedFile = event.target.files[0];
@@ -424,7 +430,7 @@ export default {
       this.editSongForm.author = '';
       this.editSongForm.filename = null;
       this.editSongForm.audioUrl = null;
-      this.chromagramData = null; // Reset chromagram data
+      this.chordsByTime = null;
     },
     removeSong(songID) {
       const path = `http://localhost:5001/songs/${songID}`;
@@ -460,7 +466,7 @@ export default {
       const body = document.querySelector('body');
       this.activeEditSongModal = !this.activeEditSongModal;
       if (!this.activeEditSongModal) {
-        this.chromagramData = null; // Reset chromagram data when modal closes
+        this.chordsByTime = null;
       }
       if (this.activeEditSongModal) {
         body.classList.add('modal-open');
@@ -489,9 +495,8 @@ export default {
         params: { filename: filename }
       })
         .then(response => {
-          // Kezeld a választ a backendtől
           console.log('Song analysis response:', response.data);
-          this.chromagramData = response.data.chromagram;
+          this.chordsByTime = response.data.chords_by_time;
           this.message = 'Song analyzed!';
           this.showMessage = true;
         })

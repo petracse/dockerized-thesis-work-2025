@@ -1,0 +1,52 @@
+def process_single_pair(flac_path, lab_path):
+    try:
+
+        y, sr = sf.read(flac_path, dtype='float32')
+        if y.ndim > 1:
+            y = y.mean(axis=1)
+        chroma_hop_length = sr // 10
+        dcp = DeepChromaProcessor()
+        chroma_orig = dcp(y)
+
+        # Gyors beat tracking librosával
+        tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
+        beat_times = librosa.frames_to_time(beat_frames, sr=sr)
+        chord_ann = load_lab(lab_path)
+        beat_frame_indices = librosa.time_to_frames(
+            beat_times,
+            sr=sr,
+            hop_length=chroma_hop_length
+        )
+
+        beat_chroma = []
+        for i in range(len(beat_frame_indices) - 1):
+            start = beat_frame_indices[i]
+            end = beat_frame_indices[i+1]
+            if end > start:
+                frames = chroma_orig[start:end]
+                # Egyszerű átlagolás (próbáld ki a súlyozottat is, ha akarod)
+                avg = np.mean(frames, axis=0)
+                # 1. Összegre normalizálás
+                norm = avg / (np.sum(avg) + 1e-8)
+                # 2. Log-skálázás
+                lognorm = np.log1p(norm)
+                beat_chroma.append(lognorm)
+            else:
+                avg = chroma_orig[start]
+                norm = avg / (np.sum(avg) + 1e-8)
+                lognorm = np.log1p(norm)
+                beat_chroma.append(lognorm)
+
+        beat_chroma = np.array(beat_chroma)
+        beat_labels = [get_chord_for_time(t, chord_ann) for t in beat_times[:-1]]
+        data_rows = []
+        start_row = ['' for _ in range(12)] + ['<START>']
+        data_rows.append(start_row)
+        for i in range(beat_chroma.shape[0]):
+            chroma_vals = ["%.6f" % v for v in beat_chroma[i]]
+            chord = beat_labels[i]
+            data_rows.append(chroma_vals + [chord])
+        return data_rows, beat_times[:-1], beat_chroma, beat_labels
+    except Exception as e:
+        print(f"Hiba a {flac_path} feldolgozásakor: {str(e)}")
+        return [], [], [], []

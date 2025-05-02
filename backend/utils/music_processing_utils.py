@@ -1,6 +1,12 @@
 import numpy as np
 import librosa
 import soundfile as sf
+import os
+import pandas as pd
+import librosa
+from madmom.audio.chroma import DeepChromaProcessor
+from hmmlearn import hmm
+
 
 def normalize_feature_sequence(X, norm='2', threshold=0.0001, v=None):
     """Normalizes the columns of a feature sequence
@@ -115,3 +121,80 @@ def compute_chromagram_from_filename(fn_wav, Fs=22050, N=4096, H=2048, gamma=Non
         X = normalize_feature_sequence(X, norm=norm)
     Fs_X = Fs / H
     return X, Fs_X, x, Fs, x_dur
+
+def load_hmm_parameters(folder):
+    means = np.load(os.path.join(folder, 'means.npy'))
+    covariances = np.load(os.path.join(folder, 'covariances.npy'))
+    transmat = np.load(os.path.join(folder, 'transmat.npy'))
+    startprob = np.load(os.path.join(folder, 'startprob.npy'))
+    with open(os.path.join(folder, 'chord_list.txt'), 'r', encoding='utf-8') as f:
+        idx_to_chord = {}
+        for line in f:
+            idx, chord = line.strip().split('\t')
+            idx_to_chord[int(idx)] = chord
+    return means, covariances, transmat, startprob, idx_to_chord
+
+def build_hmm(means, covariances, transmat, startprob):
+    n_components = means.shape[0]
+    model = hmm.GaussianHMM(
+        n_components=n_components,
+        covariance_type="full",
+        init_params="",
+        params=""
+    )
+    model.means_ = means
+    model.covars_ = covariances
+    model.transmat_ = transmat
+    model.startprob_ = startprob
+    return model
+
+def process_music_file_for_chords(flac_path, hmm_folder):
+    y, sr = sf.read(flac_path, dtype='float32')
+    if y.ndim > 1:
+        y = y.mean(axis=1)
+    chroma_hop_length = sr // 10
+    dcp = DeepChromaProcessor()
+    chroma_orig = dcp(y)
+
+    # Beat tracking
+    tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
+    beat_times = librosa.frames_to_time(beat_frames, sr=sr)
+    beat_frame_indices = librosa.time_to_frames(
+        beat_times,
+        sr=sr,
+        hop_length=chroma_hop_length
+    )
+
+    beat_chroma = []
+    for i in range(len(beat_frame_indices) - 1):
+        start = beat_frame_indices[i]
+        end = beat_frame_indices[i+1]
+        if end > start:
+            frames = chroma_orig[start:end]
+            if frames.shape[0] == 0:
+                # Hibakezelés
+                avg = np.zeros(chroma_orig.shape[1])
+            else:
+                avg = np.mean(frames, axis=0)
+            norm = avg / (np.sum(avg) + 1e-8)
+            lognorm = np.log1p(norm)
+            beat_chroma.append(lognorm)
+        else:
+            avg = chroma_orig[start]
+            norm = avg / (np.sum(avg) + 1e-8)
+            lognorm = np.log1p(norm)
+            beat_chroma.append(lognorm)
+    beat_chroma = np.array(beat_chroma)
+
+    # HMM betöltése
+    means, covariances, transmat, startprob, idx_to_chord = load_hmm_parameters(hmm_folder)
+    model = build_hmm(means, covariances, transmat, startprob)
+
+    # Predikció
+    logprob, state_sequence = model.decode(beat_chroma)
+    predicted_chords = [idx_to_chord[s] for s in state_sequence]
+
+    # Időpont - akkord párok
+    chords_by_time = {float(f"{t:.3f}"): chord for t, chord in zip(beat_times[:-1], predicted_chords)}
+
+    return chords_by_time
