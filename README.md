@@ -41,4 +41,7 @@ Use the provided script to start both the Flask backend and the Vue.js frontend:
 
 Ctrl + C in both terminals
 
-
+### Installation of Madmom
+```bash
+pip install git+https://github.com/CPJKU/madmom
+```
