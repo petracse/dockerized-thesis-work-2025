@@ -26,3 +26,21 @@ a,
     padding: 0 2rem;
   }
 }
+
+.chord-display {
+  font-size: 48px;
+  font-weight: bold;
+  margin-top: 30px;
+  transition: all 0.5s ease;
+  opacity: 1;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.5s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+

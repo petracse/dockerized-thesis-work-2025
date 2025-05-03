@@ -186,10 +186,6 @@
                   id="editSongFile"
                   @change="handleEditFileUpload">
                 <!-- Audio file player -->
-                <audio controls v-if="editSongForm.audioUrl">
-                  <source :src="editSongForm.audioUrl" type="audio/mpeg">
-                  Your browser does not support the audio element.
-                </audio>
                 <!-- File deletion button -->
                 <button
                   type="button"
@@ -206,23 +202,29 @@
                   Analyze Song
                 </button>
               </div>
-              <div v-if="chordsByTime && Object.keys(chordsByTime).length">
-                <h5>Detected Chords:</h5>
-                <ul>
-                  <li v-for="(chord, time) in chordsByTime" :key="time">
-                    {{ time }} s: {{ chord }}
+              <!-- Edit song modal, audio player részlet -->
+              <audio
+                ref="editAudio"
+                v-if="editSongForm.audioUrl && chordsByTime"
+                :src="editSongForm.audioUrl"
+                controls
+                @play="onAudioPlay"
+                @pause="onAudioPause"
+                @ended="onAudioEnded"
+              />
+              <transition name="fade">
+                <div v-if="currentChord && chordsByTime" class="chord-display">
+                  {{ currentChord }}
+                </div>
+              </transition>
+              <div v-if="chordsByTime" class="mt-3">
+                <strong>Detected chords:</strong>
+                <ul class="list-unstyled">
+                  <li v-for="([time, chord], idx) in Object.entries(chordsByTime)" :key="idx">
+                    {{ time }}: {{ chord }}
                   </li>
                 </ul>
               </div>
-              <canvas
-                v-if="editSongForm.audioUrl && chordsByTime"
-                ref="waveformCanvas"
-                width="600"
-                height="100"
-                style="width: 100%; height: 100px; border: 1px solid #ccc; margin-bottom: 16px;"
-              ></canvas>
-
-
               <div class="btn-group" role="group">
                 <button
                   type="submit"
@@ -248,15 +250,12 @@
 <script>
 import axios from 'axios';
 import Alert from './Alert.vue';
-import { nextTick } from 'vue';
+
 export default {
   data() {
     return {
-      chordNames: [
-        'A:min', 'A:maj', 'A#:min', 'A#:maj', 'B:min', 'B:maj', 'C:min', 'C:maj', 'C#:min', 'C#:maj',
-        'D:min', 'D:maj', 'D#:min', 'D#:maj', 'E:min', 'E:maj', 'F:min', 'F:maj', 'F#:min', 'F#:maj',
-        'G:min', 'G:maj', 'G#:min', 'G#:maj'
-      ],
+      currentChord: '',
+      chordIntervalId: null,
       editSongMessage: '',
       showEditSongMessage: false,
       activeAddSongModal: false,
@@ -285,90 +284,51 @@ export default {
     alert: Alert,
   },
   methods: {
-    async drawWaveformWithChords() {
-      const audioUrl = this.editSongForm.audioUrl;
-      const chordsByTime = this.chordsByTime;
-      if (!audioUrl || !chordsByTime) return;
+    getChordAtTime(currentTime) {
+      if (!this.chordsByTime) return '';
+      // Az időpontokat növekvő sorrendbe rendezzük
+      const times = Object.keys(this.chordsByTime)
+        .map(Number)
+        .sort((a, b) => a - b);
 
-      const canvas = this.$refs.waveformCanvas;
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Ha nincs akkord, vagy üres a lista
+      if (times.length === 0) return '';
 
-      // Betöltjük az audio buffert
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const response = await fetch(audioUrl);
-      const arrayBuffer = await response.arrayBuffer();
-      const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-
-      const duration = audioBuffer.duration;
-      const width = canvas.width;
-      const height = canvas.height;
-
-      // Akkord-szín hozzárendelés (fix, vagy generált)
-      const chordColors = this.getChordColors();
-
-      // chordsByTime -> [{time, chord}]
-      const chordSegments = Object.keys(chordsByTime)
-        .map(t => ({ time: Number(t), chord: chordsByTime[t] }))
-        .sort((a, b) => a.time - b.time);
-
-      // Hullámforma szakaszok és akkordnevek rajzolása
-      for (let i = 0; i < chordSegments.length; i++) {
-        const startTime = chordSegments[i].time;
-        const endTime = (i < chordSegments.length - 1)
-          ? chordSegments[i + 1].time
-          : duration;
-        const chord = chordSegments[i].chord;
-        const color = chordColors[chord] || '#888';
-
-        // Hullámforma szakasz
-        this.drawWaveformSegment(ctx, audioBuffer, startTime, endTime, width, height, color, duration);
-
-        // Akkordnév kiírása a szakasz elejére
-        const startX = (startTime / duration) * width;
-        ctx.fillStyle = color;
-        ctx.font = 'bold 14px Arial';
-        ctx.textBaseline = 'top';
-        ctx.fillText(chord, startX + 2, 2); // +2 px eltolás, hogy ne lógjon le a széléről
-      }
-    },
-
-    drawWaveformSegment(ctx, audioBuffer, startTime, endTime, width, height, color, duration) {
-      ctx.strokeStyle = color;
-      ctx.beginPath();
-      const channelData = audioBuffer.getChannelData(0);
-
-      const startX = (startTime / duration) * width;
-      const endX = (endTime / duration) * width;
-
-      // Skálázás: egy pixelre hány minta jut[3]
-      const samplesPerPixel = channelData.length / width;
-
-      for (let x = Math.floor(startX); x < Math.floor(endX); x++) {
-        const sampleIndex = Math.floor(x * samplesPerPixel);
-        const v = channelData[sampleIndex] || 0;
-        const y = (1 - v) * height / 2;
-        if (x === Math.floor(startX)) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
+      // Ha az első akkord NEM 0-nál kezdődik
+      if (times[0] > 0) {
+        if (currentTime < times[0]) {
+          return '<START>';
         }
       }
-      ctx.stroke();
-    },
 
-    getChordColors() {
-      // Minden akkordhoz egyedi szín (pl. HSL színkör alapján)
-      const colors = {};
-      const baseColors = [
-        '#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4',
-        '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff'
-      ];
-      this.chordNames.forEach((chord, i) => {
-        colors[chord] = baseColors[i % baseColors.length];
-      });
-      return colors;
+      // Alapértelmezett működés: az utolsó, még el nem múlt akkordot keressük
+      let lastChord = '';
+      for (const t of times) {
+        if (currentTime >= t) {
+          lastChord = this.chordsByTime[t];
+        } else {
+          break;
+        }
+      }
+      return lastChord;
+    },
+    onAudioPlay() {
+      const audio = this.$refs.editAudio;
+      if (!audio) return;
+      this.chordIntervalId = setInterval(() => {
+        const chord = this.getChordAtTime(audio.currentTime);
+        if (chord !== this.currentChord) {
+          this.currentChord = chord;
+        }
+      }, 100);
+    },
+    onAudioPause() {
+      clearInterval(this.chordIntervalId);
+      this.chordIntervalId = null;
+    },
+    onAudioEnded() {
+      this.onAudioPause()
+      this.currentChord = '';
     },
     formatIsoDate(isoDate) {
         if (!isoDate) return 'N/A';
@@ -383,19 +343,6 @@ export default {
         };
 
         return date.toLocaleString('hu-HU', options).replace(',', '');
-    },
-    addSong(payload) {
-      const path = 'http://localhost:5001/songs';
-      axios.post(path, payload)
-        .then(() => {
-          this.getSongs();
-          this.message = 'Song added!';
-          this.showMessage = true;
-        })
-        .catch((error) => {
-          console.log(error);
-          this.getSongs();
-        });
     },
     getSongs() {
       const path = 'http://localhost:5001/songs';
@@ -508,13 +455,14 @@ export default {
           this.editSongForm.audioUrl = null;
           this.editSongForm.filename = null;
           this.selectedEditFile = null;
-          this.message = 'File removed!';
-          this.showMessage = true;
+          this.chordsByTime = null;
+          this.editSongMessage = 'File removed!';
+          this.showEditSongMessage = true;
           this.getSongs();
         } else {
           console.error('Error removing file:', response.data);
-          this.message = 'Error removing file!';
-          this.showMessage = true;
+          this.editSongMessage  = 'Error removing file!';
+          this.showEditSongMessage = true;
         }
       } catch (error) {
         console.error('Error removing file:', error);
@@ -532,6 +480,8 @@ export default {
       this.editSongForm.filename = null;
       this.editSongForm.audioUrl = null;
       this.chordsByTime = null;
+      this.currentChord = '';
+      this.chordIntervalId = null;
     },
     removeSong(songID) {
       const path = `http://localhost:5001/songs/${songID}`;
@@ -540,6 +490,7 @@ export default {
           this.getSongs();
           this.message = 'Song removed!';
           this.showMessage = true;
+
         })
         .catch((error) => {
           console.error(error);
@@ -577,19 +528,6 @@ export default {
           body.classList.remove('modal-open');
         }
     },
-    updateSong(payload, songID) {
-      const path = `http://localhost:5001/songs/${songID}`;
-      axios.put(path, payload)
-        .then(() => {
-          this.getSongs();
-          this.message = 'Song updated!';
-          this.showMessage = true;
-        })
-        .catch((error) => {
-          console.error(error);
-          this.getSongs();
-        });
-    },
     async handleAnalyzeSong() {
       const songId = this.editSongForm.id;
       const filename = this.editSongForm.filename;
@@ -601,10 +539,8 @@ export default {
         this.chordsByTime = response.data.chords_by_time;
         this.editSongMessage = 'Song analyzed!';
         this.showEditSongMessage = true;
+        this.currentChord = '<START>';
 
-        // Várd meg, hogy a DOM és a reaktív változók frissüljenek
-        await this.$nextTick();
-        this.drawWaveformWithChords();
       } catch (error) {
         console.error('Error analyzing song:', error);
         this.editSongMessage = 'Error analyzing song!';
@@ -612,16 +548,11 @@ export default {
       }
     },
   },
-  watch: {
-    'editSongForm.audioUrl'(val) {
-      if (val && this.chordsByTime) this.drawWaveformWithChords();
-    },
-    chordsByTime(val) {
-      if (val && this.editSongForm.audioUrl) this.drawWaveformWithChords();
-    }
-  },
   created() {
     this.getSongs();
+  },
+  beforeUnmount() {
+    clearInterval(this.chordIntervalId);
   },
 };
 </script>
