@@ -158,6 +158,7 @@
             </button>
           </div>
           <div class="modal-body">
+            <alert :message="editSongMessage" v-if="showEditSongMessage"></alert>
             <form @submit.prevent="handleEditSubmit" enctype="multipart/form-data">
               <div class="mb-3">
                 <label for="editSongTitle" class="form-label">Title:</label>
@@ -243,6 +244,8 @@ import Alert from './Alert.vue';
 export default {
   data() {
     return {
+      editSongMessage: '',
+      showEditSongMessage: false,
       activeAddSongModal: false,
       activeEditSongModal: false,
       addSongForm: {
@@ -455,24 +458,26 @@ export default {
       }
     },
     toggleEditSongModal(song) {
-      if (song) {
-        this.editSongForm = { ...song }; // create a copy to avoid modifying the original
-        if (song.filename) {
-          this.editSongForm.audioUrl = `http://localhost:5001/uploads/${song.filename}`;
-        } else {
-          this.editSongForm.audioUrl = null;
+        if (song) {
+          this.editSongForm = { ...song };
+          if (song.filename) {
+            this.editSongForm.audioUrl = `http://localhost:5001/uploads/${song.filename}`;
+          } else {
+            this.editSongForm.audioUrl = null;
+          }
         }
-      }
-      const body = document.querySelector('body');
-      this.activeEditSongModal = !this.activeEditSongModal;
-      if (!this.activeEditSongModal) {
-        this.chordsByTime = null;
-      }
-      if (this.activeEditSongModal) {
-        body.classList.add('modal-open');
-      } else {
-        body.classList.remove('modal-open');
-      }
+        const body = document.querySelector('body');
+        this.activeEditSongModal = !this.activeEditSongModal;
+        if (!this.activeEditSongModal) {
+          this.chordsByTime = null;
+          this.editSongMessage = '';
+          this.showEditSongMessage = false;
+        }
+        if (this.activeEditSongModal) {
+          body.classList.add('modal-open');
+        } else {
+          body.classList.remove('modal-open');
+        }
     },
     updateSong(payload, songID) {
       const path = `http://localhost:5001/songs/${songID}`;
@@ -488,24 +493,25 @@ export default {
         });
     },
     handleAnalyzeSong() {
-      const songId = this.editSongForm.id;
-      const filename = this.editSongForm.filename;
+        const songId = this.editSongForm.id;
+        const filename = this.editSongForm.filename;
 
-      axios.get(`http://localhost:5001/songs/${songId}/analyze-song`, {
-        params: { filename: filename }
-      })
-        .then(response => {
-          console.log('Song analysis response:', response.data);
-          this.chordsByTime = response.data.chords_by_time;
-          this.message = 'Song analyzed!';
-          this.showMessage = true;
+        axios.get(`http://localhost:5001/songs/${songId}/analyze-song`, {
+          params: { filename: filename }
         })
-        .catch(error => {
-          console.error('Error analyzing song:', error);
-          this.message = 'Error analyzing song!';
-          this.showMessage = true;
-        });
+          .then(response => {
+            console.log('Song analysis response:', response.data);
+            this.chordsByTime = response.data.chords_by_time;
+            this.editSongMessage = 'Song analyzed!';
+            this.showEditSongMessage = true;
+          })
+          .catch(error => {
+            console.error('Error analyzing song:', error);
+            this.editSongMessage = 'Error analyzing song!';
+            this.showEditSongMessage = true;
+          });
     },
+
   },
   created() {
     this.getSongs();
