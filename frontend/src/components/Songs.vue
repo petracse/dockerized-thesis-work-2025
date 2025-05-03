@@ -214,6 +214,14 @@
                   </li>
                 </ul>
               </div>
+              <canvas
+                v-if="editSongForm.audioUrl && chordsByTime"
+                ref="waveformCanvas"
+                width="600"
+                height="100"
+                style="width: 100%; height: 100px; border: 1px solid #ccc; margin-bottom: 16px;"
+              ></canvas>
+
 
               <div class="btn-group" role="group">
                 <button
@@ -240,10 +248,15 @@
 <script>
 import axios from 'axios';
 import Alert from './Alert.vue';
-
+import { nextTick } from 'vue';
 export default {
   data() {
     return {
+      chordNames: [
+        'A:min', 'A:maj', 'A#:min', 'A#:maj', 'B:min', 'B:maj', 'C:min', 'C:maj', 'C#:min', 'C#:maj',
+        'D:min', 'D:maj', 'D#:min', 'D#:maj', 'E:min', 'E:maj', 'F:min', 'F:maj', 'F#:min', 'F#:maj',
+        'G:min', 'G:maj', 'G#:min', 'G#:maj'
+      ],
       editSongMessage: '',
       showEditSongMessage: false,
       activeAddSongModal: false,
@@ -272,6 +285,91 @@ export default {
     alert: Alert,
   },
   methods: {
+    async drawWaveformWithChords() {
+      const audioUrl = this.editSongForm.audioUrl;
+      const chordsByTime = this.chordsByTime;
+      if (!audioUrl || !chordsByTime) return;
+
+      const canvas = this.$refs.waveformCanvas;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Betöltjük az audio buffert
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const response = await fetch(audioUrl);
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
+      const duration = audioBuffer.duration;
+      const width = canvas.width;
+      const height = canvas.height;
+
+      // Akkord-szín hozzárendelés (fix, vagy generált)
+      const chordColors = this.getChordColors();
+
+      // chordsByTime -> [{time, chord}]
+      const chordSegments = Object.keys(chordsByTime)
+        .map(t => ({ time: Number(t), chord: chordsByTime[t] }))
+        .sort((a, b) => a.time - b.time);
+
+      // Hullámforma szakaszok és akkordnevek rajzolása
+      for (let i = 0; i < chordSegments.length; i++) {
+        const startTime = chordSegments[i].time;
+        const endTime = (i < chordSegments.length - 1)
+          ? chordSegments[i + 1].time
+          : duration;
+        const chord = chordSegments[i].chord;
+        const color = chordColors[chord] || '#888';
+
+        // Hullámforma szakasz
+        this.drawWaveformSegment(ctx, audioBuffer, startTime, endTime, width, height, color, duration);
+
+        // Akkordnév kiírása a szakasz elejére
+        const startX = (startTime / duration) * width;
+        ctx.fillStyle = color;
+        ctx.font = 'bold 14px Arial';
+        ctx.textBaseline = 'top';
+        ctx.fillText(chord, startX + 2, 2); // +2 px eltolás, hogy ne lógjon le a széléről
+      }
+    },
+
+    drawWaveformSegment(ctx, audioBuffer, startTime, endTime, width, height, color, duration) {
+      ctx.strokeStyle = color;
+      ctx.beginPath();
+      const channelData = audioBuffer.getChannelData(0);
+
+      const startX = (startTime / duration) * width;
+      const endX = (endTime / duration) * width;
+
+      // Skálázás: egy pixelre hány minta jut[3]
+      const samplesPerPixel = channelData.length / width;
+
+      for (let x = Math.floor(startX); x < Math.floor(endX); x++) {
+        const sampleIndex = Math.floor(x * samplesPerPixel);
+        const v = channelData[sampleIndex] || 0;
+        const y = (1 - v) * height / 2;
+        if (x === Math.floor(startX)) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      ctx.stroke();
+    },
+
+    getChordColors() {
+      // Minden akkordhoz egyedi szín (pl. HSL színkör alapján)
+      const colors = {};
+      const baseColors = [
+        '#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4',
+        '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff'
+      ];
+      this.chordNames.forEach((chord, i) => {
+        colors[chord] = baseColors[i % baseColors.length];
+      });
+      return colors;
+    },
     formatIsoDate(isoDate) {
         if (!isoDate) return 'N/A';
         const date = new Date(isoDate);
@@ -492,26 +590,35 @@ export default {
           this.getSongs();
         });
     },
-    handleAnalyzeSong() {
-        const songId = this.editSongForm.id;
-        const filename = this.editSongForm.filename;
+    async handleAnalyzeSong() {
+      const songId = this.editSongForm.id;
+      const filename = this.editSongForm.filename;
 
-        axios.get(`http://localhost:5001/songs/${songId}/analyze-song`, {
+      try {
+        const response = await axios.get(`http://localhost:5001/songs/${songId}/analyze-song`, {
           params: { filename: filename }
-        })
-          .then(response => {
-            console.log('Song analysis response:', response.data);
-            this.chordsByTime = response.data.chords_by_time;
-            this.editSongMessage = 'Song analyzed!';
-            this.showEditSongMessage = true;
-          })
-          .catch(error => {
-            console.error('Error analyzing song:', error);
-            this.editSongMessage = 'Error analyzing song!';
-            this.showEditSongMessage = true;
-          });
-    },
+        });
+        this.chordsByTime = response.data.chords_by_time;
+        this.editSongMessage = 'Song analyzed!';
+        this.showEditSongMessage = true;
 
+        // Várd meg, hogy a DOM és a reaktív változók frissüljenek
+        await this.$nextTick();
+        this.drawWaveformWithChords();
+      } catch (error) {
+        console.error('Error analyzing song:', error);
+        this.editSongMessage = 'Error analyzing song!';
+        this.showEditSongMessage = true;
+      }
+    },
+  },
+  watch: {
+    'editSongForm.audioUrl'(val) {
+      if (val && this.chordsByTime) this.drawWaveformWithChords();
+    },
+    chordsByTime(val) {
+      if (val && this.editSongForm.audioUrl) this.drawWaveformWithChords();
+    }
   },
   created() {
     this.getSongs();
