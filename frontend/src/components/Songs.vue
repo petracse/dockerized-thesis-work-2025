@@ -3,8 +3,7 @@
     <div class="row">
       <div class="col-sm-10">
         <h1>Songs</h1>
-        <router-link to="/music-processing">Go to Music Processing</router-link>
-        <hr><br><br>
+        <hr>
         <alert :message="message" v-if="showMessage"></alert>
         <button
           type="button"
@@ -214,8 +213,14 @@
                   type="button"
                   class="btn btn-info btn-sm mt-2"
                   @click="handleAnalyzeSong"
-                  v-if="editSongForm.filename">
-                  Analyze Song
+                  v-if="editSongForm.filename"
+                  :disabled="isAnalyzing"
+                >
+                  <span v-if="!isAnalyzing">Analyze Song</span>
+                  <span v-else>
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    <span class="sr-only">Analyzing...</span>
+                  </span>
                 </button>
               </div>
               <!-- Edit song modal, audio player részlet -->
@@ -297,6 +302,7 @@ export default {
       selectedFile: null,
       selectedEditFile: null,
       chordsByTime: null,
+      isAnalyzing: false,
     };
   },
   computed: {
@@ -324,7 +330,7 @@ export default {
       // Ha az első akkord NEM 0-nál kezdődik
       if (times[0] > 0) {
         if (currentTime < times[0]) {
-          return '<START>';
+          return '<READY>';
         }
       }
 
@@ -512,6 +518,7 @@ export default {
       this.chordsByTime = null;
       this.currentChord = '';
       this.chordIntervalId = null;
+      this.isAnalyzing = false;
     },
     removeSong(songID) {
       const path = `http://localhost:5001/songs/${songID}`;
@@ -568,6 +575,7 @@ export default {
         window.alert('Before analyzing, you must submit!');
         return;
       }
+      this.isAnalyzing = true;
       try {
         const response = await axios.get(`http://localhost:5001/songs/${songId}/analyze-song`, {
           params: { filename: filename }
@@ -576,11 +584,12 @@ export default {
         this.editSongMessage = 'Song analyzed!';
         this.showEditSongMessage = true;
         this.currentChord = '<READY>';
-
       } catch (error) {
         console.error('Error analyzing song:', error);
         this.editSongMessage = 'Error analyzing song!';
         this.showEditSongMessage = true;
+      } finally {
+        this.isAnalyzing = false;
       }
     },
   },

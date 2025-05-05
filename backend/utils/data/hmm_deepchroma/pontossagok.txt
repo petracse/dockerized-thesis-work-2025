@@ -1,12 +1,12 @@
-010 - An Innocent Man.flac: 77.917%
-012 - Lookin' for Love.flac: 94.226%
-016 - She Bop.flac: 92.736%
+010 - An Innocent Man.flac: 79.693%
+012 - Lookin' for Love.flac: 94.710%
+016 - She Bop.flac: 92.352%
 019 - Here's Some Love.flac: 85.966%
-023 - And She Was.flac: 90.738%
-086 - Space Oddity.flac: 88.309%
-094 - Wild Horses.flac: 95.724%
-109 - Ma belle amie.flac: 88.770%
-116 - Let It Rain.flac: 93.971%
-124 - Promises.flac: 86.881%
+023 - And She Was.flac: 92.855%
+086 - Space Oddity.flac: 86.374%
+094 - Wild Horses.flac: 96.209%
+109 - Ma belle amie.flac: 89.112%
+116 - Let It Rain.flac: 91.867%
+124 - Promises.flac: 86.889%
 
-Összesített WCSR: 89.617%
+Összesített WCSR: 89.656%
