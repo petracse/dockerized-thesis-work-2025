@@ -39,7 +39,7 @@
                     type="button"
                     class="btn btn-warning btn-sm"
                     @click="toggleEditSongModal(song)">
-                    Update
+                    Analyze / Update
                   </button>
                   <button
                     type="button"
@@ -199,8 +199,6 @@
                 >
                   {{ selectedEditFile.name }}
                 </span>
-
-                <!-- Audio file player -->
                 <!-- File deletion button -->
                 <button
                   type="button"
@@ -232,12 +230,24 @@
                 @play="onAudioPlay"
                 @pause="onAudioPause"
                 @ended="onAudioEnded"
+                @timeupdate="onAudioTimeUpdate"
+              />
+              <ChordTimeline
+                v-if="editSongForm.audioUrl && chordsByTime"
+                :chords-by-time="chordsByTime"
+                :duration="editAudioDuration"
+                :current-time="editAudioCurrentTime"
+                :window-size="timelineWindowSize"
+                @seek="onTimelineSeek"
               />
               <transition name="fade">
                 <div v-if="currentChord && chordsByTime" class="chord-display">
                   {{ currentChord }}
                 </div>
               </transition>
+              <div v-if="currentChord && chordsByTime && songBpm" class="bpm-display">
+                {{ normalizedSongBpm }} BPM
+              </div>
               <div v-if="chordsByTime" class="mt-3">
                 <strong>Detected chords:</strong>
                 <textarea
@@ -274,10 +284,11 @@
 <script>
 import axios from 'axios';
 import Alert from './Alert.vue';
-
+import ChordTimeline from './ChordTimeline.vue';
 export default {
   data() {
     return {
+      songBpm: null,
       currentChord: '',
       chordIntervalId: null,
       editSongMessage: '',
@@ -303,18 +314,33 @@ export default {
       selectedEditFile: null,
       chordsByTime: null,
       isAnalyzing: false,
+      editAudioCurrentTime: 0,
+      editAudioDuration: 0,
     };
   },
   computed: {
     chordsText() {
-      if (!this.chordsByTime) return '';
-      return Object.entries(this.chordsByTime)
-        .map(([time, chord]) => `${time}: ${chord}`)
-        .join('\n');
+    if (!this.chordsByTime) return '';
+    return Object.entries(this.chordsByTime)
+      .map(([time, chord]) => `${time}: ${chord}`)
+      .join('\n');
+    },
+    timelineWindowSize() {
+      if (!this.songBpm) return 240 / 106;
+      return 240 / this.songBpm;
+    },
+    normalizedSongBpm() {
+      let bpm = Number(this.songBpm);
+      if (!bpm) return '';
+      // Addig osztjuk vagy szorozzuk 2-vel, amíg a tartományba nem esik
+      while (bpm < 50) bpm *= 2;
+      while (bpm > 200) bpm /= 2;
+      return bpm.toFixed(2);
     }
   },
   components: {
     alert: Alert,
+    ChordTimeline
   },
   methods: {
     getChordAtTime(currentTime) {
@@ -348,7 +374,9 @@ export default {
     onAudioPlay() {
       const audio = this.$refs.editAudio;
       if (!audio) return;
+      this.editAudioDuration = audio.duration || 0;
       this.chordIntervalId = setInterval(() => {
+        this.editAudioCurrentTime = audio.currentTime;
         const chord = this.getChordAtTime(audio.currentTime);
         if (chord !== this.currentChord) {
           this.currentChord = chord;
@@ -360,8 +388,19 @@ export default {
       this.chordIntervalId = null;
     },
     onAudioEnded() {
-      this.onAudioPause()
+      this.onAudioPause();
       this.currentChord = '';
+      this.editAudioCurrentTime = 0;
+    },
+    onAudioTimeUpdate(e) {
+      this.editAudioCurrentTime = e.target.currentTime;
+    },
+    onTimelineSeek(time) {
+      const audio = this.$refs.editAudio;
+      if (audio) {
+        audio.currentTime = time;
+        this.editAudioCurrentTime = time;
+      }
     },
     formatIsoDate(isoDate) {
         if (!isoDate) return 'N/A';
@@ -581,6 +620,7 @@ export default {
           params: { filename: filename }
         });
         this.chordsByTime = response.data.chords_by_time;
+        this.songBpm = response.data.bpm;
         this.editSongMessage = 'Song analyzed!';
         this.showEditSongMessage = true;
         this.currentChord = '<READY>';

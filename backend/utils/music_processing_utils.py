@@ -196,5 +196,47 @@ def process_music_file_for_chords_deepchroma(flac_path, hmm_folder):
 
     # Időpont - akkord párok
     chords_by_time = {float(f"{t:.3f}"): chord for t, chord in zip(beat_times[:-1], predicted_chords)}
+    bpm = estimate_bpm_fourier(beat_times)
+    return merge_consecutive_chords(chords_by_time), bpm
 
-    return chords_by_time
+def merge_consecutive_chords(chords_by_time):
+    merged_chords = {}
+    previous_chord = None
+    for time, chord in sorted(chords_by_time.items()):
+        if chord != previous_chord:
+            merged_chords[time] = chord
+            previous_chord = chord
+    return merged_chords
+
+def estimate_bpm_fourier(beat_times, dt=0.01):
+    if len(beat_times) < 2:
+        return 0.0
+
+    # Időtartomány
+    t_start = beat_times[0]
+    t_end = beat_times[-1]
+    duration = t_end - t_start
+    if duration <= 0:
+        return 0.0
+
+    # Időrács
+    t = np.arange(t_start, t_end, dt)
+    impulse = np.zeros_like(t)
+    beat_indices = np.searchsorted(t, beat_times)
+    # Vigyázat: lehet, hogy néhány index kilóg, ezért csak a tartományon belülieket állítjuk 1-re
+    beat_indices = beat_indices[beat_indices < len(impulse)]
+    impulse[beat_indices] = 1
+
+    # DC komponens eltávolítása
+    impulse = impulse - np.mean(impulse)
+
+    # FFT
+    spectrum = np.abs(np.fft.rfft(impulse))
+    freqs = np.fft.rfftfreq(len(impulse), d=dt)
+
+    # DC komponens kihagyása
+    peak_idx = np.argmax(spectrum[1:]) + 1
+    peak_freq = freqs[peak_idx]
+    bpm = peak_freq * 60
+
+    return bpm

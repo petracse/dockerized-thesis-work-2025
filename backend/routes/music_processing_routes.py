@@ -21,11 +21,15 @@ def analyze_song(song_id):
     hmm_folder = os.path.join(current_app.root_path, 'utils', 'data', 'hmm_deepchroma')
 
     try:
-        chords_by_time = process_music_file_for_chords_deepchroma(fn_audio, hmm_folder)
+        chords_by_time, bpm = process_music_file_for_chords_deepchroma(fn_audio, hmm_folder)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-    return jsonify({"chords_by_time": chords_by_time})
+    return jsonify({
+        "chords_by_time": chords_by_time,
+        "bpm": bpm
+    })
+
 
 @music_processing.route('/process-audio', methods=['POST'])
 def process_audio():
