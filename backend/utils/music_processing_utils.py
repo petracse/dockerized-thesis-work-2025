@@ -148,7 +148,7 @@ def build_hmm(means, covariances, transmat, startprob):
     model.startprob_ = startprob
     return model
 
-def process_music_file_for_chords(flac_path, hmm_folder):
+def process_music_file_for_chords_deepchroma(flac_path, hmm_folder):
     y, sr = sf.read(flac_path, dtype='float32')
     if y.ndim > 1:
         y = y.mean(axis=1)

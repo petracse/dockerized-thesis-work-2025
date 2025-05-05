@@ -30,7 +30,7 @@ a,
 .chord-display {
   font-size: 48px;
   font-weight: bold;
-  margin-top: 30px;
+  margin-top: 0;
   transition: all 0.5s ease;
   opacity: 1;
 }

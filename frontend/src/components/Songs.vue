@@ -179,12 +179,28 @@
                   placeholder="Enter author">
               </div>
               <div class="mb-3">
-                <label for="editSongFile" class="form-label">File:</label>
                 <input
+                  ref="editFileInput"
                   type="file"
-                  class="form-control"
+                  style="display: none;"
                   id="editSongFile"
-                  @change="handleEditFileUpload">
+                  @change="handleEditFileUpload"
+                >
+                <!-- Gomb a file input triggereléséhez -->
+                <button
+                  type="button"
+                  class="btn btn-secondary btn-sm mt-2"
+                  @click="openEditFileInput"
+                >
+                  Change file
+                </button>
+                <!-- Fájlnév kijelzése, ha van kiválasztott fájl -->
+                <span
+                  v-if="selectedEditFile && selectedEditFile.name !== editSongForm.filename"
+                >
+                  {{ selectedEditFile.name }}
+                </span>
+
                 <!-- Audio file player -->
                 <!-- File deletion button -->
                 <button
@@ -219,12 +235,15 @@
               </transition>
               <div v-if="chordsByTime" class="mt-3">
                 <strong>Detected chords:</strong>
-                <ul class="list-unstyled">
-                  <li v-for="([time, chord], idx) in Object.entries(chordsByTime)" :key="idx">
-                    {{ time }}: {{ chord }}
-                  </li>
-                </ul>
+                <textarea
+                  class="form-control"
+                  rows="10"
+                  style="resize:vertical; min-height:150px; max-height:400px; font-family:monospace;"
+                  readonly
+                  :value="chordsText"
+                ></textarea>
               </div>
+
               <div class="btn-group" role="group">
                 <button
                   type="submit"
@@ -279,6 +298,14 @@ export default {
       selectedEditFile: null,
       chordsByTime: null,
     };
+  },
+  computed: {
+    chordsText() {
+      if (!this.chordsByTime) return '';
+      return Object.entries(this.chordsByTime)
+        .map(([time, chord]) => `${time}: ${chord}`)
+        .join('\n');
+    }
   },
   components: {
     alert: Alert,
@@ -438,6 +465,9 @@ export default {
       this.selectedFile = null;
       this.addSongForm.audioUrl = null;
     },
+    openEditFileInput() {
+      this.$refs.editFileInput.click();
+    },
     handleEditFileUpload(event) {
       this.selectedEditFile = event.target.files[0];
       this.editSongForm.audioUrl = URL.createObjectURL(this.selectedEditFile);
@@ -531,7 +561,13 @@ export default {
     async handleAnalyzeSong() {
       const songId = this.editSongForm.id;
       const filename = this.editSongForm.filename;
-
+      if (
+        this.selectedEditFile &&
+        this.selectedEditFile.name !== this.editSongForm.filename
+      ) {
+        window.alert('Before analyzing, you must submit!');
+        return;
+      }
       try {
         const response = await axios.get(`http://localhost:5001/songs/${songId}/analyze-song`, {
           params: { filename: filename }
@@ -539,7 +575,7 @@ export default {
         this.chordsByTime = response.data.chords_by_time;
         this.editSongMessage = 'Song analyzed!';
         this.showEditSongMessage = true;
-        this.currentChord = '<START>';
+        this.currentChord = '<READY>';
 
       } catch (error) {
         console.error('Error analyzing song:', error);

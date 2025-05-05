@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, current_app, request
 from utils.music_processing_utils import compute_chromagram_from_filename
-from utils.music_processing_utils import process_music_file_for_chords
+from utils.music_processing_utils import process_music_file_for_chords_deepchroma
 import os
 
 music_processing = Blueprint('music_processing_routes', __name__)
@@ -18,10 +18,10 @@ def analyze_song(song_id):
         return jsonify({"error": "Audio file not found"}), 404
 
     # HMM paraméterek mappája
-    hmm_folder = os.path.join(current_app.root_path, 'utils', 'data')
+    hmm_folder = os.path.join(current_app.root_path, 'utils', 'data', 'hmm_deepchroma')
 
     try:
-        chords_by_time = process_music_file_for_chords(fn_audio, hmm_folder)
+        chords_by_time = process_music_file_for_chords_deepchroma(fn_audio, hmm_folder)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
