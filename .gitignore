@@ -1,5 +1,4 @@
 backend/venv/
-backend/.env
 backend/songs.json
 backend/**/__pycache__/
 backend/*.pyc
