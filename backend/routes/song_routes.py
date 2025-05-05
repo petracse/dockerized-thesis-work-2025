@@ -2,6 +2,8 @@ from flask import jsonify, request, Blueprint, current_app
 from services.song_service import SongService
 from utils.song_utils import allowed_file
 
+from models.song_model import Song
+
 song_routes = Blueprint('song_routes', __name__)
 song_service = SongService()
 
@@ -21,7 +23,8 @@ def add_song():
 
         if file.filename == '':
             return jsonify({'status': 'error', 'message': 'No selected file'})
-
+        if Song.query.count() >= 20:
+            return jsonify({'status': 'error', 'message': '20 songs limit exceeded!'}), 400
         if file and allowed_file(file.filename, ALLOWED_EXTENSIONS):
             try:
                 new_song = song_service.add_song(

@@ -102,11 +102,6 @@
                   class="form-control"
                   id="addSongFile"
                   @change="handleFileUpload">
-                <!-- Audio file player -->
-                <audio controls v-if="addSongForm.audioUrl">
-                  <source :src="addSongForm.audioUrl" type="audio/mpeg">
-                  Your browser does not support the audio element.
-                </audio>
                 <!-- File deletion button -->
                 <button
                   type="button"
@@ -231,7 +226,7 @@
                 @pause="onAudioPause"
                 @ended="onAudioEnded"
                 @timeupdate="onAudioTimeUpdate"
-              />
+              >Your browser does not support the audio element.</audio>
               <ChordTimeline
                 v-if="editSongForm.audioUrl && chordsByTime"
                 :chords-by-time="chordsByTime"

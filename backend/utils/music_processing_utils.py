@@ -2,7 +2,6 @@ import numpy as np
 import librosa
 import soundfile as sf
 import os
-import pandas as pd
 import librosa
 from madmom.audio.chroma import DeepChromaProcessor
 from hmmlearn import hmm
@@ -196,8 +195,10 @@ def process_music_file_for_chords_deepchroma(flac_path, hmm_folder):
 
     # Időpont - akkord párok
     chords_by_time = {float(f"{t:.3f}"): chord for t, chord in zip(beat_times[:-1], predicted_chords)}
+    chords_by_time = merge_consecutive_chords(chords_by_time)
+    chords_by_time = simplify_chords_dict(chords_by_time)
     bpm = estimate_bpm_fourier(beat_times)
-    return merge_consecutive_chords(chords_by_time), bpm
+    return chords_by_time, bpm
 
 def merge_consecutive_chords(chords_by_time):
     merged_chords = {}
@@ -208,7 +209,7 @@ def merge_consecutive_chords(chords_by_time):
             previous_chord = chord
     return merged_chords
 
-def estimate_bpm_fourier(beat_times, dt=0.01):
+def estimate_bpm_fourier(beat_times, dt=0.05):
     if len(beat_times) < 2:
         return 0.0
 
@@ -240,3 +241,23 @@ def estimate_bpm_fourier(beat_times, dt=0.01):
     bpm = peak_freq * 60
 
     return bpm
+
+def simplify_chord_name(chord):
+    """
+    Egyszerűsíti az akkord nevét:
+    - 'A#:maj' -> 'A#'
+    - 'A#:min' -> 'A#m'
+    """
+    if chord.endswith(':maj'):
+        return chord[:-4]
+    elif chord.endswith(':min'):
+        return chord[:-4] + 'm'
+    else:
+        return chord
+
+def simplify_chords_dict(chords_by_time):
+    """
+    chords_by_time: {időpont: akkord_név, ...}
+    Visszaad: ugyanilyen dict, de egyszerűsített nevekkel.
+    """
+    return {time: simplify_chord_name(chord) for time, chord in chords_by_time.items()}
