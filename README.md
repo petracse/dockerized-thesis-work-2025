@@ -29,7 +29,7 @@ pip install git+https://github.com/CPJKU/madmom
 ### Install Node Dependencies
 Navigate to the frontend directory and install the necessary packages:
 ```bash
-cd frontend npm install
+cd frontend && npm install
 ```
 
 ## Running the Application
