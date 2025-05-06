@@ -8,7 +8,7 @@ music_processing = Blueprint('music_processing_routes', __name__)
 def analyze_song(song_id):
     uploads_folder = os.path.join(current_app.root_path, 'uploads')
     filename = request.args.get('filename')
-
+    is_youtube = request.args.get('isYoutube', 'false').lower() == 'true'
     if not filename:
         return jsonify({"error": "Filename is missing"}), 400
 
@@ -21,7 +21,7 @@ def analyze_song(song_id):
     hmm_folder = os.path.join(current_app.root_path, 'utils', 'data', 'hmm_deepchroma')
 
     try:
-        chords_by_time, bpm = process_music_file_for_chords_deepchroma(fn_audio, hmm_folder)
+        chords_by_time, bpm = process_music_file_for_chords_deepchroma(fn_audio, hmm_folder, is_youtube)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

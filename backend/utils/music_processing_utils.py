@@ -38,7 +38,7 @@ def build_hmm(means, covariances, transmat, startprob):
     model.startprob_ = startprob
     return model
 
-def process_music_file_for_chords_deepchroma(song_path, hmm_folder, expected_sr=44100):
+def process_music_file_for_chords_deepchroma(song_path, hmm_folder, is_youtube, expected_sr=44100):
     y, sr = sf.read(song_path, dtype='float32')
     if y.ndim > 1:
         y = y.mean(axis=1)
@@ -91,7 +91,8 @@ def process_music_file_for_chords_deepchroma(song_path, hmm_folder, expected_sr=
     # Időpont - akkord párok
     chords_by_time = {float(f"{t:.3f}"): chord for t, chord in zip(beat_times[:-1], predicted_chords)}
     chords_by_time = merge_consecutive_chords(chords_by_time)
-    chords_by_time = simplify_chords_dict(chords_by_time)
+    if is_youtube and (len(chords_by_time) > 0):
+        chords_by_time = simplify_chords_dict(chords_by_time)
     bpm = estimate_bpm_fourier(beat_times)
     return chords_by_time, bpm
 

@@ -191,7 +191,35 @@
                   v-model="editSongForm.yt_url"
                   placeholder="Enter YouTube URL">
               </div>
-
+              <div v-if="editSongForm.filename && editSongForm.yt_url" class="mb-3">
+                <div class="form-label mb-1">You want to analyze</div>
+                <div class="form-check form-check-inline">
+                  <input
+                    class="form-check-input"
+                    type="radio"
+                    id="analyzeUploadedFile"
+                    :value="false"
+                    v-model="isYoutube"
+                    @change="handleRadioChange"
+                  />
+                  <label class="form-check-label" for="analyzeUploadedFile">
+                    uploaded file
+                  </label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input
+                    class="form-check-input"
+                    type="radio"
+                    id="analyzeYoutube"
+                    :value="true"
+                    v-model="isYoutube"
+                    @change="handleRadioChange"
+                  />
+                  <label class="form-check-label" for="analyzeYoutube">
+                    Youtube link
+                  </label>
+                </div>
+              </div>
               <div class="mb-3">
                 <input
                   ref="editFileInput"
@@ -226,7 +254,7 @@
                   type="button"
                   class="btn btn-info btn-sm mt-2"
                   @click="handleAnalyzeSong"
-                  v-if="editSongForm.filename"
+                  v-if="editSongForm.filename || editSongForm.yt_url"
                   :disabled="isAnalyzing"
                 >
                   <span v-if="!isAnalyzing">Analyze Song</span>
@@ -238,22 +266,21 @@
               </div>
               <!-- Edit song modal, audio player részlet -->
               <!-- YouTube beágyazás, ha yt_url van -->
-              <div v-if="editSongForm.yt_url && chordsByTime">
-                <iframe
+              <div v-if="editSongForm.yt_url && chordsByTime && isYoutube">
+                <youtube-iframe
+                  ref="ytPlayer"
+                  :video-id="getYoutubeId(editSongForm.yt_url)"
                   width="100%"
                   height="315"
-                  :src="getYoutubeEmbedUrl(editSongForm.yt_url)"
-                  title="YouTube video player"
-                  style="border:0;"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowfullscreen>
-                </iframe>
+                  @ready="onYoutubeReady"
+                />
+                <p>Aktuális idő: {{ editYoutubeCurrentTime.toFixed(2) }} mp</p>
               </div>
 
               <!-- Audio player, ha nincs yt_url -->
               <audio
                 ref="editAudio"
-                v-else-if="editSongForm.audioUrl && chordsByTime"
+                v-if="editSongForm.audioUrl && chordsByTime && !isYoutube"
                 :src="editSongForm.audioUrl"
                 controls
                 @play="onAudioPlay"
@@ -263,13 +290,14 @@
               >Your browser does not support the audio element.</audio>
 
               <ChordTimeline
-                v-if="editSongForm.audioUrl && chordsByTime"
+                v-if="chordsByTime"
                 :chords-by-time="chordsByTime"
-                :duration="editAudioDuration"
-                :current-time="editAudioCurrentTime"
+                :duration="isYoutube ? editYoutubeDuration : editAudioDuration"
+                :current-time="isYoutube ? editYoutubeCurrentTime : editAudioCurrentTime"
                 :window-size="timelineWindowSize"
-                @seek="onTimelineSeek"
+                @seek="isYoutube ? onTimelineSeekYoutube : onTimelineSeek"
               />
+
               <transition name="fade">
                 <div v-if="currentChord && chordsByTime" class="chord-display">
                   {{ currentChord }}
@@ -315,9 +343,15 @@
 import axios from 'axios';
 import Alert from './Alert.vue';
 import ChordTimeline from './ChordTimeline.vue';
+import { YoutubeIframe } from '@vue-youtube/component';
 export default {
   data() {
     return {
+      isYoutube: false,
+      originalYtUrl: '',
+      editYoutubeDuration: 0,
+      editYoutubeCurrentTime: 0,
+      ytIntervalId: null,
       songBpm: null,
       currentChord: '',
       chordIntervalId: null,
@@ -352,38 +386,56 @@ export default {
   },
   computed: {
     chordsText() {
-    if (!this.chordsByTime) return '';
-    return Object.entries(this.chordsByTime)
-      .map(([time, chord]) => `${time}: ${chord}`)
-      .join('\n');
-    },
-    timelineWindowSize() {
-      if (!this.songBpm) return 240 / 106;
-      return 240 / this.songBpm;
-    },
-    normalizedSongBpm() {
-      let bpm = Number(this.songBpm);
-      if (!bpm) return '';
-      // Addig osztjuk vagy szorozzuk 2-vel, amíg a tartományba nem esik
-      while (bpm < 50) bpm *= 2;
-      while (bpm > 200) bpm /= 2;
-      return bpm.toFixed(2);
-    }
+      if (!this.chordsByTime) return '';
+      return Object.entries(this.chordsByTime)
+        .map(([time, chord]) => `${time}: ${chord}`)
+        .join('\n');
+      },
+      timelineWindowSize() {
+        if (!this.songBpm) return 240 / 106;
+        return 240 / this.songBpm;
+      },
+      normalizedSongBpm() {
+        let bpm = Number(this.songBpm);
+        if (!bpm) return '';
+        // Addig osztjuk vagy szorozzuk 2-vel, amíg a tartományba nem esik
+        while (bpm < 50) bpm *= 2;
+        while (bpm > 200) bpm /= 2;
+        return bpm.toFixed(2);
+      }
   },
   components: {
     alert: Alert,
-    ChordTimeline
+    ChordTimeline,
+    YoutubeIframe
   },
   methods: {
-    getYoutubeEmbedUrl(ytUrl) {
-      // Kinyeri a videó azonosítót és beágyazhatóvá alakítja
-      const match = ytUrl.match(
-        /(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/
-      );
-      const videoId = match ? match[1] : null;
-      return videoId
-        ? `https://www.youtube.com/embed/${videoId}`
-        : '';
+    handleRadioChange() {
+      this.chordsByTime = null;
+      this.currentChord = '';
+    },
+    getYoutubeId(url) {
+      const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/))([A-Za-z0-9_-]{11})/);
+      return match ? match[1] : '';
+    },
+    onYoutubeReady(event) {
+      clearInterval(this.chordIntervalId);
+      this.chordIntervalId = null;
+      if (event.target && typeof event.target.getDuration === 'function') {
+        this.editYoutubeDuration = event.target.getDuration();
+      }
+
+      // 100ms-onként lekérjük az aktuális időt
+      if (this.ytIntervalId) clearInterval(this.ytIntervalId);
+      this.ytIntervalId = setInterval(() => {
+        if (event.target && typeof event.target.getCurrentTime === 'function') {
+          this.editYoutubeCurrentTime = event.target.getCurrentTime();
+          const chord = this.getChordAtTime(this.editYoutubeCurrentTime);
+            if (chord !== this.currentChord) {
+              this.currentChord = chord;
+            }
+        }
+      }, 100);
     },
     getChordAtTime(currentTime) {
       if (!this.chordsByTime) return '';
@@ -414,6 +466,8 @@ export default {
       return lastChord;
     },
     onAudioPlay() {
+      clearInterval(this.ytIntervalId);
+      this.ytIntervalId = null;
       const audio = this.$refs.editAudio;
       if (!audio) return;
       this.editAudioDuration = audio.duration || 0;
@@ -442,6 +496,12 @@ export default {
       if (audio) {
         audio.currentTime = time;
         this.editAudioCurrentTime = time;
+      }
+    },
+    onTimelineSeekYoutube(time) {
+      if (this.$refs.ytPlayer && this.$refs.ytPlayer.player) {
+        this.$refs.ytPlayer.player.seekTo(time, true);
+        this.editYoutubeCurrentTime = time;
       }
     },
     formatIsoDate(isoDate) {
@@ -606,6 +666,8 @@ export default {
       this.currentChord = '';
       this.chordIntervalId = null;
       this.isAnalyzing = false;
+      this.selectedEditFile = null;
+      this.isYoutube = false;
     },
     removeSong(songID) {
       const path = `http://localhost:5001/songs/${songID}`;
@@ -633,6 +695,7 @@ export default {
     toggleEditSongModal(song) {
         if (song) {
           this.editSongForm = { ...song };
+          this.originalYtUrl = song.yt_url || '';
           if (song.filename) {
             this.editSongForm.audioUrl = `http://localhost:5001/uploads/${song.filename}`;
           } else {
@@ -656,8 +719,9 @@ export default {
       const songId = this.editSongForm.id;
       const filename = this.editSongForm.filename;
       if (
-        this.selectedEditFile &&
-        this.selectedEditFile.name !== this.editSongForm.filename
+          (this.selectedEditFile &&
+        this.selectedEditFile.name !== this.editSongForm.filename) ||
+          (this.editSongForm.yt_url && this.originalYtUrl !== this.editSongForm.yt_url)
       ) {
         window.alert('Before analyzing, you must submit!');
         return;
@@ -665,7 +729,7 @@ export default {
       this.isAnalyzing = true;
       try {
         const response = await axios.get(`http://localhost:5001/songs/${songId}/analyze-song`, {
-          params: { filename: filename }
+          params: { filename: filename, isYoutube: this.isYoutube === true || this.isYoutube === "true" }
         });
         this.chordsByTime = response.data.chords_by_time;
         this.songBpm = response.data.bpm;
@@ -686,6 +750,7 @@ export default {
   },
   beforeUnmount() {
     clearInterval(this.chordIntervalId);
+    clearInterval(this.ytIntervalId);
   },
 };
 </script>
