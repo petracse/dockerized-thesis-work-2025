@@ -31,7 +31,8 @@ def add_song():
                     request.form.get('title'),
                     request.form.get('author'),
                     file,
-                    current_app.config['UPLOAD_FOLDER']
+                    current_app.config['UPLOAD_FOLDER'],
+                    request.form.get('yt_url')
                 )
                 return jsonify({'status': 'success', 'message': 'Song added!', 'filename': new_song.filename})
             except Exception as e:
@@ -53,7 +54,8 @@ def update_song(song_id):
             request.form.get('title'),
             request.form.get('author'),
             file,
-            current_app.config['UPLOAD_FOLDER']
+            current_app.config['UPLOAD_FOLDER'],
+            request.form.get('yt_url')
         )
 
         if updated_song:

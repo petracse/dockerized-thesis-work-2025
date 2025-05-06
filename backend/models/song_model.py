@@ -14,6 +14,7 @@ class Song(db.Model):
     userid = db.Column(db.String(255), default="default_user_id")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, nullable=True)
+    yt_url = db.Column(db.String(255), nullable=True, default="")
 
     def to_dict(self):
         return {
@@ -23,5 +24,6 @@ class Song(db.Model):
             'filename': self.filename,
             'userid': self.userid,
             'created_at': self.created_at.isoformat(),
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'yt_url': self.yt_url
         }

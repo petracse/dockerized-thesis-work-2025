@@ -96,6 +96,16 @@
                   placeholder="Enter author">
               </div>
               <div class="mb-3">
+                <label for="addSongYtUrl" class="form-label">(Optional) YouTube URL:</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="addSongYtUrl"
+                  v-model="addSongForm.yt_url"
+                  placeholder="Enter YouTube URL">
+              </div>
+
+              <div class="mb-3">
                 <label for="addSongFile" class="form-label">File:</label>
                 <input
                   type="file"
@@ -173,6 +183,16 @@
                   placeholder="Enter author">
               </div>
               <div class="mb-3">
+                <label for="editSongYtUrl" class="form-label">(Optional) YouTube URL:</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="editSongYtUrl"
+                  v-model="editSongForm.yt_url"
+                  placeholder="Enter YouTube URL">
+              </div>
+
+              <div class="mb-3">
                 <input
                   ref="editFileInput"
                   type="file"
@@ -217,9 +237,23 @@
                 </button>
               </div>
               <!-- Edit song modal, audio player részlet -->
+              <!-- YouTube beágyazás, ha yt_url van -->
+              <div v-if="editSongForm.yt_url && chordsByTime">
+                <iframe
+                  width="100%"
+                  height="315"
+                  :src="getYoutubeEmbedUrl(editSongForm.yt_url)"
+                  title="YouTube video player"
+                  style="border:0;"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowfullscreen>
+                </iframe>
+              </div>
+
+              <!-- Audio player, ha nincs yt_url -->
               <audio
                 ref="editAudio"
-                v-if="editSongForm.audioUrl && chordsByTime"
+                v-else-if="editSongForm.audioUrl && chordsByTime"
                 :src="editSongForm.audioUrl"
                 controls
                 @play="onAudioPlay"
@@ -227,6 +261,7 @@
                 @ended="onAudioEnded"
                 @timeupdate="onAudioTimeUpdate"
               >Your browser does not support the audio element.</audio>
+
               <ChordTimeline
                 v-if="editSongForm.audioUrl && chordsByTime"
                 :chords-by-time="chordsByTime"
@@ -294,6 +329,7 @@ export default {
         title: '',
         author: '',
         audioUrl: null,
+        yt_url: ''
       },
       songs: [],
       editSongForm: {
@@ -302,6 +338,7 @@ export default {
         author: '',
         filename: null,
         audioUrl: null,
+        yt_url: ''
       },
       message: '',
       showMessage: false,
@@ -338,6 +375,16 @@ export default {
     ChordTimeline
   },
   methods: {
+    getYoutubeEmbedUrl(ytUrl) {
+      // Kinyeri a videó azonosítót és beágyazhatóvá alakítja
+      const match = ytUrl.match(
+        /(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/
+      );
+      const videoId = match ? match[1] : null;
+      return videoId
+        ? `https://www.youtube.com/embed/${videoId}`
+        : '';
+    },
     getChordAtTime(currentTime) {
       if (!this.chordsByTime) return '';
       // Az időpontokat növekvő sorrendbe rendezzük
@@ -433,6 +480,8 @@ export default {
       let formData = new FormData();
       formData.append('title', this.addSongForm.title);
       formData.append('author', this.addSongForm.author);
+      formData.append('yt_url', this.addSongForm.yt_url);
+
       if (this.selectedFile) {
         formData.append('file', this.selectedFile);
       }
@@ -472,6 +521,8 @@ export default {
       let formData = new FormData();
       formData.append('title', this.editSongForm.title);
       formData.append('author', this.editSongForm.author);
+      formData.append('yt_url', this.editSongForm.yt_url);
+
 
       if (this.selectedEditFile) {
         formData.append('file', this.selectedEditFile);
@@ -543,6 +594,8 @@ export default {
     initForm() {
       this.addSongForm.title = '';
       this.addSongForm.author = '';
+      this.addSongForm.yt_url = '';
+      this.editSongForm.yt_url = '';
       this.addSongForm.audioUrl = null;
       this.editSongForm.id = '';
       this.editSongForm.title = '';
