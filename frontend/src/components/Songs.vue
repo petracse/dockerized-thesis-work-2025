@@ -266,7 +266,7 @@
               </div>
               <!-- Edit song modal, audio player részlet -->
               <!-- YouTube beágyazás, ha yt_url van -->
-              <div v-if="editSongForm.yt_url && chordsByTime && isYoutube">
+              <div v-if="editSongForm.yt_url && chordsByTime && (!this.editSongForm.filename || isYoutube)">
                 <youtube-iframe
                   ref="ytPlayer"
                   :video-id="getYoutubeId(editSongForm.yt_url)"
@@ -274,13 +274,12 @@
                   height="315"
                   @ready="onYoutubeReady"
                 />
-                <p>Aktuális idő: {{ editYoutubeCurrentTime.toFixed(2) }} mp</p>
               </div>
 
               <!-- Audio player, ha nincs yt_url -->
               <audio
                 ref="editAudio"
-                v-if="editSongForm.audioUrl && chordsByTime && !isYoutube"
+                v-if="editSongForm.audioUrl && chordsByTime &&!isYoutube"
                 :src="editSongForm.audioUrl"
                 controls
                 @play="onAudioPlay"
@@ -292,10 +291,10 @@
               <ChordTimeline
                 v-if="chordsByTime"
                 :chords-by-time="chordsByTime"
-                :duration="isYoutube ? editYoutubeDuration : editAudioDuration"
-                :current-time="isYoutube ? editYoutubeCurrentTime : editAudioCurrentTime"
+                :duration="(isYoutube || !this.editSongForm.filename) ? editYoutubeDuration : editAudioDuration"
+                :current-time="(isYoutube || !this.editSongForm.filename) ? editYoutubeCurrentTime : editAudioCurrentTime"
                 :window-size="timelineWindowSize"
-                @seek="isYoutube ? onTimelineSeekYoutube : onTimelineSeek"
+                @seek="(isYoutube || !this.editSongForm.filename) ? onTimelineSeekYoutube : onTimelineSeek"
               />
 
               <transition name="fade">
@@ -727,9 +726,10 @@ export default {
         return;
       }
       this.isAnalyzing = true;
+      const isYoutubeParam = !filename ? true : (this.isYoutube === true || this.isYoutube === "true");
       try {
         const response = await axios.get(`http://localhost:5001/songs/${songId}/analyze-song`, {
-          params: { filename: filename, isYoutube: this.isYoutube === true || this.isYoutube === "true" }
+          params: { filename: filename, ytUrl: this.originalYtUrl, isYoutube: isYoutubeParam }
         });
         this.chordsByTime = response.data.chords_by_time;
         this.songBpm = response.data.bpm;

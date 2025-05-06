@@ -16,29 +16,38 @@ def ping_pong():
 @song_routes.route('/songs', methods=['GET', 'POST'])
 def add_song():
     if request.method == 'POST':
-        if 'file' not in request.files:
-            return jsonify({'status': 'error', 'message': 'No file part'})
+        file = request.files.get('file')
+        yt_url = request.form.get('yt_url')
 
-        file = request.files['file']
+        # Ha se file, se yt_url nincs, hiba
+        if (not file or file.filename == '') and not yt_url:
+            return jsonify({'status': 'error', 'message': 'No file or yt_url provided!'}), 400
 
-        if file.filename == '':
-            return jsonify({'status': 'error', 'message': 'No selected file'})
+        # Ha van file, de üres nevű, úgy kezeljük, mintha nem lenne
+        if file and file.filename == '':
+            file = None
+
         if Song.query.count() >= 20:
             return jsonify({'status': 'error', 'message': '20 songs limit exceeded!'}), 400
-        if file and allowed_file(file.filename, ALLOWED_EXTENSIONS):
-            try:
-                new_song = song_service.add_song(
-                    request.form.get('title'),
-                    request.form.get('author'),
-                    file,
-                    current_app.config['UPLOAD_FOLDER'],
-                    request.form.get('yt_url')
-                )
-                return jsonify({'status': 'success', 'message': 'Song added!', 'filename': new_song.filename})
-            except Exception as e:
-                return jsonify({'status': 'error', 'message': str(e)}), 500
-        else:
+
+        # Ha van file, de nem engedélyezett típus
+        if file and not allowed_file(file.filename, ALLOWED_EXTENSIONS):
             return jsonify({'status': 'error', 'message': 'Invalid file type'})
+
+        try:
+            new_song = song_service.add_song(
+                request.form.get('title'),
+                request.form.get('author'),
+                file,
+                current_app.config['UPLOAD_FOLDER'],
+                yt_url
+            )
+            return jsonify({'status': 'success', 'message': 'Song added!', 'filename': getattr(new_song, "filename", None)})
+        except ValueError as e:
+            return jsonify({'status': 'error', 'message': str(e)}), 400
+        except Exception as e:
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+
     else:
         return jsonify({'status': 'success', 'songs': [song.to_dict() for song in song_service.get_all_songs()]})
 
@@ -46,22 +55,38 @@ def add_song():
 def update_song(song_id):
     if request.method == 'PUT':
         file = request.files.get('file')
+        yt_url = request.form.get('yt_url')
+
+        # Ha van file, de nem engedélyezett típus
         if file and not allowed_file(file.filename, ALLOWED_EXTENSIONS):
             return jsonify({'status': 'error', 'message': 'Invalid file type'})
 
-        updated_song = song_service.update_song(
-            song_id,
-            request.form.get('title'),
-            request.form.get('author'),
-            file,
-            current_app.config['UPLOAD_FOLDER'],
-            request.form.get('yt_url')
-        )
+        # Ha se file, se yt_url nincs, hiba
+        if (not file or file.filename == '') and yt_url is None:
+            return jsonify({'status': 'error', 'message': 'No file or yt_url provided!'}), 400
 
-        if updated_song:
-            return jsonify({'status': 'success', 'message': 'Song updated!'})
-        else:
-            return jsonify({'status': 'error', 'message': 'Song not found!'}), 404
+        # Ha van file, de üres nevű, úgy kezeljük, mintha nem lenne
+        if file and file.filename == '':
+            file = None
+
+        try:
+            updated_song = song_service.update_song(
+                song_id,
+                request.form.get('title'),
+                request.form.get('author'),
+                file,
+                current_app.config['UPLOAD_FOLDER'],
+                yt_url
+            )
+
+            if updated_song:
+                return jsonify({'status': 'success', 'message': 'Song updated!'})
+            else:
+                return jsonify({'status': 'error', 'message': 'Song not found!'}), 404
+        except ValueError as e:
+            return jsonify({'status': 'error', 'message': str(e)}), 400
+        except Exception as e:
+            return jsonify({'status': 'error', 'message': str(e)}), 500
 
     elif request.method == 'DELETE':
         if song_service.delete_song(song_id, current_app.config['UPLOAD_FOLDER']):

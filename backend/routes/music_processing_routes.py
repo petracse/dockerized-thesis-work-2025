@@ -8,20 +8,22 @@ music_processing = Blueprint('music_processing_routes', __name__)
 def analyze_song(song_id):
     uploads_folder = os.path.join(current_app.root_path, 'uploads')
     filename = request.args.get('filename')
+    yt_url = request.args.get('ytUrl')
     is_youtube = request.args.get('isYoutube', 'false').lower() == 'true'
-    if not filename:
+    if not filename and not yt_url:
         return jsonify({"error": "Filename is missing"}), 400
+    fn_audio = ""
+    if not is_youtube:
+        fn_audio = os.path.join(uploads_folder, filename)
 
-    fn_audio = os.path.join(uploads_folder, filename)
-
-    if not os.path.exists(fn_audio):
-        return jsonify({"error": "Audio file not found"}), 404
+        if not os.path.exists(fn_audio):
+            return jsonify({"error": "Audio file not found"}), 404
 
     # HMM paraméterek mappája
     hmm_folder = os.path.join(current_app.root_path, 'utils', 'data', 'hmm_deepchroma')
 
     try:
-        chords_by_time, bpm = process_music_file_for_chords_deepchroma(fn_audio, hmm_folder, is_youtube)
+        chords_by_time, bpm = process_music_file_for_chords_deepchroma(hmm_folder, yt_url, is_youtube, fn_audio)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
