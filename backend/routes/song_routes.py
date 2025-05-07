@@ -103,6 +103,8 @@ def delete_song_file(song_id):
 def get_uploaded_file_path(filename):
     return os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
 
+import logging
+
 @song_routes.route('/songs/<song_id>/analyze-song', methods=['GET'])
 def analyze_song(song_id):
     filename = request.args.get('filename')
@@ -120,12 +122,14 @@ def analyze_song(song_id):
     try:
         chords_by_time, bpm = process_music_file_for_chords_deepchroma(hmm_folder, yt_url, is_youtube, fn_audio)
     except Exception as e:
+        current_app.logger.error(f"Error in analyze_song: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
     return jsonify({
         "chords_by_time": chords_by_time,
         "bpm": bpm
     })
+
 
 @song_routes.route('/uploads/<filename>')
 def uploaded_file(filename):

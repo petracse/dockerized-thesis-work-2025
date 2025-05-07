@@ -28,7 +28,7 @@
               <td>{{ song.title }}</td>
               <td>{{ song.author }}</td>
               <td>
-                <a :href="'http://localhost:5001/uploads/' + song.filename" target="_blank" v-if="song.filename">{{ song.filename }}</a>
+                <a :href="'/api/uploads/' + song.filename" target="_blank" v-if="song.filename">{{ song.filename }}</a>
                 <span v-else>No file</span>
               </td>
               <td>{{ formatIsoDate(song.created_at) }}</td>
@@ -518,7 +518,7 @@ export default {
         return date.toLocaleString('hu-HU', options).replace(',', '');
     },
     getSongs() {
-      const path = 'http://localhost:5001/songs';
+      const path = '/api/songs';
       axios.get(path)
         .then((res) => {
           this.songs = res.data.songs;
@@ -545,7 +545,7 @@ export default {
         formData.append('file', this.selectedFile);
       }
 
-      const path = 'http://localhost:5001/songs';
+      const path = '/api/songs';
       axios.post(path, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
@@ -587,7 +587,7 @@ export default {
         formData.append('file', this.selectedEditFile);
       }
 
-      const path = `http://localhost:5001/songs/${this.editSongForm.id}`;
+      const path = `/api/songs/${this.editSongForm.id}`;
       axios.put(path, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
@@ -627,7 +627,7 @@ export default {
       const filename = this.editSongForm.filename;
 
       try {
-        const response = await axios.delete(`http://localhost:5001/songs/${songId}/file`, {
+        const response = await axios.delete(`/api/songs/${songId}/file`, {
           data: { filename: filename }
         });
 
@@ -669,7 +669,7 @@ export default {
       this.isYoutube = false;
     },
     removeSong(songID) {
-      const path = `http://localhost:5001/songs/${songID}`;
+      const path = `/api/songs/${songID}`;
       axios.delete(path)
         .then(() => {
           this.getSongs();
@@ -696,7 +696,7 @@ export default {
           this.editSongForm = { ...song };
           this.originalYtUrl = song.yt_url || '';
           if (song.filename) {
-            this.editSongForm.audioUrl = `http://localhost:5001/uploads/${song.filename}`;
+            this.editSongForm.audioUrl = `/api/uploads/${song.filename}`;
           } else {
             this.editSongForm.audioUrl = null;
           }
@@ -728,7 +728,7 @@ export default {
       this.isAnalyzing = true;
       const isYoutubeParam = !filename ? true : (this.isYoutube === true || this.isYoutube === "true");
       try {
-        const response = await axios.get(`http://localhost:5001/songs/${songId}/analyze-song`, {
+        const response = await axios.get(`/api/songs/${songId}/analyze-song`, {
           params: { filename: filename, ytUrl: this.originalYtUrl, isYoutube: isYoutubeParam }
         });
         this.chordsByTime = response.data.chords_by_time;

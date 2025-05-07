@@ -13,7 +13,7 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///songs.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.getenv('UPLOAD_FOLDER')
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50 MB
+app.config['MAX_CONTENT_LENGTH'] = 40 * 1024 * 1024  # 40 MB
 CORS(app, resources={r'/*': {'origins': '*'}})
 db.init_app(app)
 
@@ -23,7 +23,24 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 # Importáld a route-okat az adatbázis inicializálása után
 from routes.song_routes import song_routes
 
-app.register_blueprint(song_routes)
+app.register_blueprint(song_routes, url_prefix='/api')
+
+def warmup_jit():
+    try:
+        wav_path = os.path.join(app.config['UPLOAD_FOLDER'], 'FMP_C5_F01_Beatles_LetItBe-mm1-4_Original.wav')
+        hmm_folder = os.path.join(app.root_path, 'utils', 'data', 'hmm_deepchroma')
+        from utils.music_processing_utils import process_music_file_for_chords_deepchroma
+        process_music_file_for_chords_deepchroma(
+            hmm_folder=hmm_folder,
+            yt_url="",
+            is_youtube=False,
+            song_path=wav_path
+        )
+        print("Warm-up JIT: sikeres.")
+    except Exception as e:
+        print(f"Warm-up JIT hiba: {e}")
+
+warmup_jit()
 
 if __name__ == '__main__':
     app.run()
