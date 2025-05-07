@@ -25,7 +25,10 @@ from routes.song_routes import song_routes
 
 app.register_blueprint(song_routes, url_prefix='/api')
 
+warmup_done = False
+
 def warmup_jit():
+    global warmup_done
     try:
         wav_path = os.path.join(app.config['UPLOAD_FOLDER'], 'FMP_C5_F01_Beatles_LetItBe-mm1-4_Original.wav')
         hmm_folder = os.path.join(app.root_path, 'utils', 'data', 'hmm_deepchroma')
@@ -36,11 +39,17 @@ def warmup_jit():
             is_youtube=False,
             song_path=wav_path
         )
+        warmup_done = True
         print("Warm-up JIT: sikeres.")
     except Exception as e:
         print(f"Warm-up JIT hiba: {e}")
+        warmup_done = False
 
 warmup_jit()
+
+@app.route('/api/warmup-status')
+def warmup_status():
+    return {'done': warmup_done}
 
 if __name__ == '__main__':
     app.run()

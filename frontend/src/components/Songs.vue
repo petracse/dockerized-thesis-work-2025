@@ -1,5 +1,11 @@
 <template>
   <div class="container">
+  <div v-if="warmupLoading" class="text-center my-5">
+    <div class="spinner-border" role="status"></div>
+    <p>Warming up...</p>
+  </div>
+  <div v-else>
+  
     <div class="row">
       <div class="col-sm-10">
         <h1>Songs</h1>
@@ -336,6 +342,7 @@
     </div>
     <div v-if="activeEditSongModal" class="modal-backdrop fade show"></div>
   </div>
+  </div>
 </template>
 
 <script>
@@ -346,6 +353,7 @@ import { YoutubeIframe } from '@vue-youtube/component';
 export default {
   data() {
     return {
+      warmupLoading: true,
       isYoutube: false,
       originalYtUrl: '',
       editYoutubeDuration: 0,
@@ -409,6 +417,21 @@ export default {
     YoutubeIframe
   },
   methods: {
+    async checkWarmup() {
+        while (true) {
+          try {
+            const res = await axios.get('/api/warmup-status');
+            if (res.data.done) {
+              this.warmupLoading = false;
+              this.getSongs(); // csak akkor töltsd le a dalokat, ha kész
+              break;
+            }
+          } catch (e) {
+        // opcionális: hibakezelés
+          }
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    },
     handleRadioChange() {
       this.chordsByTime = null;
       this.currentChord = '';
@@ -746,7 +769,7 @@ export default {
     },
   },
   created() {
-    this.getSongs();
+    this.checkWarmup();
   },
   beforeUnmount() {
     clearInterval(this.chordIntervalId);
