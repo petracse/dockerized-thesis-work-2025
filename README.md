@@ -3,12 +3,12 @@
 ## Setup
 
 ```bash
-docker compose up --build -d
+docker build --no-cache -t chord-recognizer-ep .
 ```
 
 
 ## Stopping the Application
 
 ```bash
-docker compose down
+docker run -p 80:80 chord-recognizer-ep
 ```
