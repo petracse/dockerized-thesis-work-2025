@@ -1,17 +1,14 @@
-from flask import jsonify, request, Blueprint, current_app
+from flask import jsonify, request, Blueprint, current_app, send_from_directory
 from services.song_service import SongService
 from utils.song_utils import allowed_file
-
+from utils.music_processing_utils import process_music_file_for_chords_deepchroma
 from models.song_model import Song
+import os
 
 song_routes = Blueprint('song_routes', __name__)
 song_service = SongService()
 
 ALLOWED_EXTENSIONS = {'mp3', 'wav', 'flac', 'ogg'}
-
-@song_routes.route('/ping', methods=['GET'])
-def ping_pong():
-    return jsonify('pong!')
 
 @song_routes.route('/songs', methods=['GET', 'POST'])
 def add_song():
@@ -102,3 +99,34 @@ def delete_song_file(song_id):
 
     song_service.delete_song_file(song, current_app.config['UPLOAD_FOLDER'])
     return jsonify({'status': 'success', 'message': 'File removed successfully!'}), 200
+
+def get_uploaded_file_path(filename):
+    return os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+
+@song_routes.route('/songs/<song_id>/analyze-song', methods=['GET'])
+def analyze_song(song_id):
+    filename = request.args.get('filename')
+    yt_url = request.args.get('ytUrl')
+    is_youtube = request.args.get('isYoutube', 'false').lower() == 'true'
+    if not filename and not yt_url:
+        return jsonify({"error": "Filename is missing"}), 400
+    fn_audio = ""
+    if not is_youtube:
+        fn_audio = get_uploaded_file_path(filename)
+        if not os.path.exists(fn_audio):
+            return jsonify({"error": "Audio file not found"}), 404
+
+    hmm_folder = os.path.join(current_app.root_path, 'utils', 'data', 'hmm_deepchroma')
+    try:
+        chords_by_time, bpm = process_music_file_for_chords_deepchroma(hmm_folder, yt_url, is_youtube, fn_audio)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    return jsonify({
+        "chords_by_time": chords_by_time,
+        "bpm": bpm
+    })
+
+@song_routes.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename)

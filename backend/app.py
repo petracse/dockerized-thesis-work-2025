@@ -22,14 +22,8 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # Importáld a route-okat az adatbázis inicializálása után
 from routes.song_routes import song_routes
-from routes.music_processing_routes import music_processing
 
 app.register_blueprint(song_routes)
-app.register_blueprint(music_processing)
-
-@app.route('/uploads/<filename>')
-def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 if __name__ == '__main__':
     app.run()
