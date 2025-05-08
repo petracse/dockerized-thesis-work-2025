@@ -3,7 +3,7 @@
 ## Setup
 
 ```bash
-docker build --no-cache -t chord-recognizer-ep .
+docker build -t chord-recognizer-ep .
 ```
 
 

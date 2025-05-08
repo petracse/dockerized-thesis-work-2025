@@ -110,17 +110,25 @@ def analyze_song(song_id):
     filename = request.args.get('filename')
     yt_url = request.args.get('ytUrl')
     is_youtube = request.args.get('isYoutube', 'false').lower() == 'true'
+
+    current_app.logger.info(f"analyze_song hívás: song_id={song_id}, filename={filename}, yt_url={yt_url}, is_youtube={is_youtube}")
+
     if not filename and not yt_url:
+        current_app.logger.warning("Hiányzó filename és yt_url paraméter!")
         return jsonify({"error": "Filename is missing"}), 400
+
     fn_audio = ""
     if not is_youtube:
         fn_audio = get_uploaded_file_path(filename)
         if not os.path.exists(fn_audio):
+            current_app.logger.error(f"Audio file nem található: {fn_audio}")
             return jsonify({"error": "Audio file not found"}), 404
 
     hmm_folder = os.path.join(current_app.root_path, 'utils', 'data', 'hmm_deepchroma')
     try:
+        current_app.logger.info("process_music_file_for_chords_deepchroma meghívása...")
         chords_by_time, bpm = process_music_file_for_chords_deepchroma(hmm_folder, yt_url, is_youtube, fn_audio)
+        current_app.logger.info(f"process_music_file_for_chords_deepchroma visszatért, bpm={bpm}, akkordok: {len(chords_by_time)} db")
     except Exception as e:
         current_app.logger.error(f"Error in analyze_song: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
