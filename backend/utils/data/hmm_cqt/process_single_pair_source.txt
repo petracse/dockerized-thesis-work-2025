@@ -1,0 +1,68 @@
+def process_single_pair(flac_path, lab_path):
+    try:
+        y, sr = sf.read(flac_path, dtype='float32')
+        if y.ndim > 1:
+            y = y.mean(axis=1)
+
+        y = preemphasis(y)
+        tuning = librosa.estimate_tuning(y=y, sr=sr)
+
+        
+        chroma_hop_length = sr // 10  # 10 Hz frame rate
+        chroma_orig = librosa.feature.chroma_cqt(
+            y=y,
+            sr=sr,
+            hop_length=chroma_hop_length,
+            n_chroma=12,
+            tuning=tuning
+        ).T  # shape: (n_frames, 12)
+
+        tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
+        beat_times = librosa.frames_to_time(beat_frames, sr=sr)
+        beat_frame_indices = librosa.time_to_frames(
+            beat_times,
+            sr=sr,
+            hop_length=chroma_hop_length
+        )
+
+        chord_ann = load_lab(lab_path)
+        beat_chroma = []
+
+        for i in range(len(beat_frame_indices) - 1):
+            start = beat_frame_indices[i]
+            end = beat_frame_indices[i + 1]
+
+            if start >= chroma_orig.shape[0]:
+                continue
+            end = min(end, chroma_orig.shape[0])
+
+            if end > start:
+                frames = chroma_orig[start:end]
+                energies = np.sum(frames, axis=1)  # shape: (num_frames,)
+                total_energy = np.sum(energies) + 1e-8
+                weights = energies / total_energy
+                weighted_avg = np.average(frames, axis=0, weights=weights)
+            else:
+                weighted_avg = chroma_orig[start]
+
+            # Zajküszöbölés utólag
+            thresholded = np.where(weighted_avg < 0.01, 0.0, weighted_avg)
+            beat_chroma.append(thresholded)
+
+        beat_chroma = np.array(beat_chroma)
+        beat_labels = [get_chord_for_time(t, chord_ann) for t in beat_times[:-1]]
+
+        data_rows = []
+        start_row = ['' for _ in range(12)] + ['<START>']
+        data_rows.append(start_row)
+
+        for i in range(beat_chroma.shape[0]):
+            chroma_vals = ["%.6f" % v for v in beat_chroma[i]]
+            chord = beat_labels[i]
+            data_rows.append(chroma_vals + [chord])
+
+        return data_rows, beat_times[:-1], beat_chroma, beat_labels
+
+    except Exception as e:
+        print(f"Hiba a {flac_path} feldolgozásakor: {str(e)}")
+        return [], [], [], []
