@@ -1,7 +1,7 @@
 from flask import jsonify, request, Blueprint, current_app, send_from_directory
 from services.song_service import SongService
 from utils.song_utils import allowed_file
-from utils.music_processing_utils import process_music_file_for_chords_deepchroma
+from utils.music_processing_utils import process_music_file_for_chords_deepchroma, process_music_file_for_chords_cqt
 from models.song_model import Song
 import os
 
