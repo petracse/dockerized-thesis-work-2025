@@ -28,7 +28,8 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 COPY backend/requirements.txt .
 RUN pip install --upgrade pip setuptools
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install "Cython<3.0" "numpy==2.1.3"
+RUN pip install --no-build-isolation --no-cache-dir -r requirements.txt
 COPY backend/ .
 
 # 3. stage
